@@ -14,12 +14,10 @@ class deck:
 		current_ind = random.randint(0,51)
 		while(done == 0):
 			if(current_ind in self.cards_dealt):
+				current_ind = random.randint(0,51)
 				continue
 			else:
 				self.cards_dealt.append(current_ind)
 				print(self.cards_dealt)
 				done = 1
 				return self.our_deck[current_ind]
-
-
-
