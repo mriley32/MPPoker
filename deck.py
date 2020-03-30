@@ -36,7 +36,6 @@ class Card:
     def rank(self):
         return (self.card_idx % 13) + 2
 
-
 class Deck:
 
     def __init__(self):
