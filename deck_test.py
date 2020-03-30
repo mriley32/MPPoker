@@ -47,6 +47,15 @@ class DeckTestCase(unittest.TestCase):
         with self.assertRaises(IndexError):
             d.deal_one()
 
+    def test_shuffle(self):
+        # TODO(matt): This will have to be updated when deal_one switches to returning a Card
+        # It's annoying hard to test a shuffle. We'll just make sure it runs and the first two cards are different.
+        d = deck.Deck()
+        d.shuffle()
+        c1 = d.deal_one()
+        c2 = d.deal_one()
+        self.assertNotEqual(c1, c2)
+            
 
 if __name__ == '__main__':
     unittest.main()
