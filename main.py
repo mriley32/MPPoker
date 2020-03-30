@@ -1,13 +1,14 @@
 #MAIN
 import sys
 import random
-from deck import deck
+import deck
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QImage, QPalette, QBrush
 from PyQt5.QtCore import *
 from PyQt5 import QtGui, QtCore
 
-deck = deck()
+deck = deck.Deck()
+
 def deal():
 	#print("Made it here!")
 	print(deck.deal_one())
