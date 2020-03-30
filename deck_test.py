@@ -27,7 +27,7 @@ class CardTestCase(unittest.TestCase):
             c = deck.Card(idx)
             new_card = deck.Card.from_str(str(c))
             self.assertEqual(idx, new_card.card_idx)
-            
+
 
 
 class DeckTestCase(unittest.TestCase):
@@ -46,6 +46,7 @@ class DeckTestCase(unittest.TestCase):
             d.deal_one()
         with self.assertRaises(IndexError):
             d.deal_one()
-    
+
+
 if __name__ == '__main__':
     unittest.main()
