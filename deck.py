@@ -15,6 +15,8 @@ class Card:
     _RANK_STR = ["", "", "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"]
 
     def __init__(self, idx):
+        if idx < 0 or idx > 51:
+            raise ValueError("Invalid card index {}".format(idx))
         self.card_idx = idx
 
     def __str__(self):

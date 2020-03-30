@@ -14,7 +14,14 @@ class CardTestCase(unittest.TestCase):
         self.assertEqual("Kh", str(deck.Card(37)))
         self.assertEqual("As", str(deck.Card(51)))
 
-    
+    def test_init_invalid(self):
+        with self.assertRaises(ValueError):
+            deck.Card(-1)
+        with self.assertRaises(ValueError):
+            deck.Card(52)
+        with self.assertRaises(ValueError):
+            deck.Card(1000)
 
+            
 if __name__ == '__main__':
     unittest.main()
