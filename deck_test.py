@@ -28,6 +28,24 @@ class CardTestCase(unittest.TestCase):
             new_card = deck.Card.from_str(str(c))
             self.assertEqual(idx, new_card.card_idx)
             
-            
+
+
+class DeckTestCase(unittest.TestCase):
+
+    def test_deal_one(self):
+        # TODO(matt): This will have to be updated when deal_one switches to returning a Card
+        d = deck.Deck()
+
+        self.assertEqual("2c", d.deal_one())
+        self.assertEqual("3c", d.deal_one())
+        self.assertEqual("4c", d.deal_one())
+
+    def test_deal_one_invalid(self):
+        d = deck.Deck()
+        for _ in range(52):
+            d.deal_one()
+        with self.assertRaises(IndexError):
+            d.deal_one()
+    
 if __name__ == '__main__':
     unittest.main()
