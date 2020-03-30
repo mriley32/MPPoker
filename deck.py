@@ -9,7 +9,7 @@ class Suit(Enum):
         SPADES = 3
 
 _SUIT_STR = ["c", "d", "h", "s"]
-        
+_RANK_STR = ["", "", "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"]
 
                 
 class Card:
@@ -17,7 +17,7 @@ class Card:
                 self.card_idx = idx
                 
         def __str__(self):
-                return str(self.rank()) + _SUIT_STR[self.suit().value]
+                return _RANK_STR[self.rank()] + _SUIT_STR[self.suit().value]
 
         def suit(self):
                 return Suit(self.card_idx // 13)
