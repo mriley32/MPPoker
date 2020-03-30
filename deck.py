@@ -1,7 +1,7 @@
 import sys
 import random
 
-class deck:
+class Deck:
 
 	def __init__(self):
 		self.our_deck = ["Ac" ,"2c","3c","4c","5c","6c","7c","8c","9c","Tc","Jc","Qc","Kc",
