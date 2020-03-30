@@ -22,6 +22,12 @@ class CardTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             deck.Card(1000)
 
+    def test_from_str(self):
+        for idx in range(52):
+            c = deck.Card(idx)
+            new_card = deck.Card.from_str(str(c))
+            self.assertEqual(idx, new_card.card_idx)
+            
             
 if __name__ == '__main__':
     unittest.main()

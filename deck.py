@@ -14,13 +14,18 @@ class Card:
     _SUIT_STR = ["c", "d", "h", "s"]
     _RANK_STR = ["", "", "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"]
 
+    def from_str(s):
+        return Card(
+            Card._SUIT_STR.index(s[1]) * 13 +
+            Card._RANK_STR.index(s[0]) - 2)
+    
     def __init__(self, idx):
         if idx < 0 or idx > 51:
             raise ValueError("Invalid card index {}".format(idx))
         self.card_idx = idx
-
+        
     def __str__(self):
-        return self._RANK_STR[self.rank()] + self._SUIT_STR[self.suit().value]
+        return Card._RANK_STR[self.rank()] + Card._SUIT_STR[self.suit().value]
 
     def suit(self):
         return Suit(self.card_idx // 13)
