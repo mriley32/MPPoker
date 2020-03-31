@@ -49,4 +49,4 @@ class Deck:
     def deal_one(self):
         self.next_card_idx += 1
         # TODO(matt): Remove this "str" when you switch to deal_one returning a card
-        return str(self.our_deck[self.next_card_idx - 1])
+        return (self.our_deck[self.next_card_idx - 1])
