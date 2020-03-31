@@ -27,6 +27,9 @@ class Card:
     def __str__(self):
         return Card._RANK_STR[self.rank()] + Card._SUIT_STR[self.suit().value]
 
+    def __eq__(self, other):
+        return self.card_idx == other.card_idx
+    
     def suit(self):
         return Suit(self.card_idx // 13)
 
