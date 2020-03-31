@@ -16,6 +16,12 @@ class HandRank(Enum):
 
 
 class Hand:
+    """Class representing a hand of cards
+
+    Attributes:
+       cards: a list of deck.Card
+    """
+    
     def __init__(self):
         self.cards = []
 
