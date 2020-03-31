@@ -46,7 +46,7 @@ class Hand:
         """
         if len(self.cards) != 5:
             raise ValueError("Not enough cards ({}) in {} to get hand rank"
-                             .format(len(self.cards), self.cards))
+                             .format(len(self.cards), self))
 
         # To make finding the low straights easier, we'll keep two
         # versions of our rank counts, one with the low ace included

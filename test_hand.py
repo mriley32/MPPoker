@@ -65,6 +65,15 @@ class HandTestCase(unittest.TestCase):
         self.assertEqual([hand.HandRank.HIGH_CARD, 10, 8, 6, 4, 2],
                          hand.Hand.from_str("2s 4c 6d, 8s Ts").hand_rank())
 
+
+    def test_hand_rank_7_card(self):
+        self.assertEqual(
+            [hand.HandRank.STRAIGHT_FLUSH, 10],
+            hand.Hand.from_str("9s Ts 8s 7s 6s 2s 3s").hand_rank())
+        self.assertEqual(
+            [hand.HandRank.FULL_HOUSE, 11, 10],
+            hand.Hand.from_str("Js Ts Jc 2c 2s Jd Td").hand_rank())
+        
         
 
     
