@@ -16,27 +16,74 @@ def deal():
 	print(deck.deal_one())
 
 def deal_hole_cards(MainWindow):
-	card_one = deck.deal_one()
-	card_two = deck.deal_one()
-	print(card_one)
-	print(card_two)
+  card_one = deck.deal_one()
+  card_two = deck.deal_one()
+  print(card_one)
+  print(card_two)
 
-	labelc1 = QLabel(MainWindow)
-	labelc2 = QLabel(MainWindow)
-	card1im = QPixmap("Images/Cards/"+str(card_one)+".png")
-	card2im = QPixmap("Images/Cards/"+str(card_two)+".png")
-	labelc1.setPixmap(card1im)
-	labelc1.move(600,700)
-	labelc1.setGeometry(564,700,72,96)
-	labelc1.show()
+  labelc1 = QLabel(MainWindow)
+  labelc2 = QLabel(MainWindow)
+  card1im = QPixmap("Images/Cards/"+str(card_one)+".png")
+  card2im = QPixmap("Images/Cards/"+str(card_two)+".png")
 
-	labelc2.setPixmap(card2im)
-	labelc2.move(600,700)
-	labelc2.setGeometry(600,700,72,96)
-	labelc2.show()
-	#MainWindow.setCentralWidget(labelc1)
-	#MainWindow.show()
+  labelc1.setPixmap(card1im)
+  #labelc1.move(600,700)
+  labelc1.setGeometry(564,700,72,96)
+  labelc1.show()
 
+  labelc2.setPixmap(card2im)
+  #labelc2.move(600,700)
+  labelc2.setGeometry(600,700,72,96)
+  labelc2.show()
+
+def deal_flop_cards(MainWindow):
+  card_one = deck.deal_one()
+  card_two = deck.deal_one()
+  card_three = deck.deal_one()
+  print(card_one)
+  print(card_two)
+  print(card_three)
+
+  labelc1 = QLabel(MainWindow)
+  labelc2 = QLabel(MainWindow)
+  labelc3 = QLabel(MainWindow)
+  card1im = QPixmap("Images/Cards/"+str(card_one)+".png")
+  card2im = QPixmap("Images/Cards/"+str(card_two)+".png")
+  card3im = QPixmap("Images/Cards/"+str(card_three)+".png")
+  
+  labelc1.setPixmap(card1im)
+  #labelc1.move(600,700)
+  labelc1.setGeometry(414,300,72,96)
+  labelc1.show()
+
+  labelc2.setPixmap(card2im)
+  #labelc2.move(600,700)
+  labelc2.setGeometry(489,300,72,96)
+  labelc2.show()
+
+  labelc3.setPixmap(card3im)
+  #labelc2.move(600,700)
+  labelc3.setGeometry(564,300,72,96)
+  labelc3.show()
+
+def deal_turn_card(MainWindow):
+  card_one = deck.deal_one()
+  print(card_one)
+
+  labelc1 = QLabel(MainWindow)
+  card1im = QPixmap("Images/Cards/"+str(card_one)+".png")
+  labelc1.setPixmap(card1im)
+  labelc1.setGeometry(639,300,72,96)
+  labelc1.show()
+
+def deal_river_card(MainWindow):
+  card_one = deck.deal_one()
+  print(card_one)
+  labelc1 = QLabel(MainWindow)
+  card1im = QPixmap("Images/Cards/"+str(card_one)+".png")
+  labelc1.setPixmap(card1im)
+  labelc1.setGeometry(714,300,72,96)
+  labelc1.show()
 
 class MainWindow(QMainWindow):
   def __init__(self):
@@ -59,6 +106,21 @@ class MainWindow(QMainWindow):
     deal_hole.clicked.connect(lambda: deal_hole_cards(self))
     deal_hole.resize(120,75)
     deal_hole.move(4,650)
+
+    deal_flop = QPushButton('Deal Flop Cards', self)
+    deal_flop.clicked.connect(lambda: deal_flop_cards(self))
+    deal_flop.resize(120,75)
+    deal_flop.move(4,575)
+
+    deal_turn = QPushButton('Deal Turn Card', self)
+    deal_turn.clicked.connect(lambda: deal_turn_card(self))
+    deal_turn.resize(120,75)
+    deal_turn.move(4,500)
+
+    deal_river = QPushButton('Deal River Card', self)
+    deal_river.clicked.connect(lambda: deal_river_card(self))
+    deal_river.resize(120,75)
+    deal_river.move(4,425)
     #deal_button.show()
     self.show()
 
