@@ -22,8 +22,26 @@ class Hand:
        cards: a list of deck.Card
     """
     
-    def __init__(self):
-        self.cards = []
+    def __init__(self, cards=[]):
+        # Make a copy to avoid any aliasing problems with the caller
+        self.cards = cards.copy()
 
+    def from_str(input_str):
+        return Hand([deck.Card.from_str(s) for s in input_str.split(" ")])
+
+    def __str__(self):
+        return " ".join(str(c) for c in self.cards) 
+        
     def hand_rank(self):
+        """Return the best poker hand that can be made from these cards.
+
+        Returns:
+          list where first element is HandRank and other elements are what is
+          needed to rank this hard. For example, if the hand is 
+          2s 2h 9s 9h Td, the list returned is
+          [TWO_PAIR, 9, 2, 10]
+       
+        Raises:
+          ValueError: if the hand has less than 5 cards
+        """
         return [HIGH_CARD]
