@@ -20,6 +20,9 @@ plyr8 = [684,50]
 plyr9 = [444,50]
 all_plyr_coords = [plyr1,plyr2,plyr3,plyr4,plyr5,plyr6,plyr7,plyr8,plyr9]
 
+plyr_cards = []
+comm_cards = []
+
 deck = deck.Deck()
 deck.shuffle()
 
@@ -45,6 +48,8 @@ def deal_all_hole_cards(MainWindow):
 
     labelc1.show()
     labelc2.show()
+    plyr_cards.append([card_one,card_two])
+  #print(plyr_cards)
 
 def deal_hole_cards(MainWindow, plyr_coords):
   card_one = deck.deal_one()
@@ -74,6 +79,9 @@ def deal_flop_cards(MainWindow):
   print(card_one)
   print(card_two)
   print(card_three)
+  comm_cards.append(card_one)
+  comm_cards.append(card_two)
+  comm_cards.append(card_three)
 
   labelc1 = QLabel(MainWindow)
   labelc2 = QLabel(MainWindow)
@@ -100,6 +108,7 @@ def deal_flop_cards(MainWindow):
 def deal_turn_card(MainWindow):
   card_one = deck.deal_one()
   print(card_one)
+  comm_cards.append(card_one)
 
   labelc1 = QLabel(MainWindow)
   card1im = QPixmap("Images/Cards/"+str(card_one)+".png")
@@ -110,6 +119,8 @@ def deal_turn_card(MainWindow):
 def deal_river_card(MainWindow):
   card_one = deck.deal_one()
   print(card_one)
+  comm_cards.append(card_one)
+
   labelc1 = QLabel(MainWindow)
   card1im = QPixmap("Images/Cards/"+str(card_one)+".png")
   labelc1.setPixmap(card1im)
