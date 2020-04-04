@@ -30,7 +30,12 @@ class HandTestCase(unittest.TestCase):
         self.assertGreater(r1, r3)
         self.assertGreaterEqual(r1, r3)
         self.assertGreaterEqual(r1, r2)
-        
+
+    def test_combine(self):
+        h1 = hand.Hand.from_str("2c 3d")
+        h2 = hand.Hand.from_str("4h 5s")
+        self.assertEqual("2c 3d 4h 5s", str(h1.combine(h2)))
+    
     def test_hand_rank_too_few_cards(self):
         with self.assertRaises(ValueError):
             hand.Hand.from_str("2s 3c").hand_rank()

@@ -32,42 +32,9 @@ plyr_ranks = []
 deck = deck.Deck()
 deck.shuffle()
 
-def hand_rank_7(c_hand, hole_cards):
-#ranks a 7 card hand where self has the 5 community cards and cards = two hole cards
-  #print(hole_cards)
-  comm_cards = c_hand.copy()
-  comm_cards.append(hole_cards[0])
-  comm_cards.append(hole_cards[1])
-  #Just makes every possible combination, 7 choose 5
-  allpossibles = list(combinations(comm_cards,5))
-  c_rank = []
-  i = 0
-  for c in allpossibles:
-    this_hand = hand.Hand(list(c))
-    #print(str(this_hand))
-    if i == 0:
-      c_rank = this_hand.hand_rank()
-      i = 1
-      continue
-    else:
-      test_rank = this_hand.hand_rank()
-      if(hand.compare_hrank(c_rank,test_rank) == 1):
-        c_rank = test_rank
-
-  print(c_rank)
-  return c_rank
 
 def best_player():
-  #Just looks at all 9 players hand ranks and returns which one is best
-  ans = 8
-  c_rank = plyr_ranks[8]
-  for x in range(8):
-    new_rank = plyr_ranks[x]
-    if(hand.compare_hrank(c_rank,new_rank) == 1):
-      c_rank = new_rank
-      ans = x
-  #print(c_rank)
-  return ans
+  return plyr_ranks.index(max(plyr_ranks))
 
 
 def deal():
@@ -171,9 +138,9 @@ def deal_river_card(MainWindow):
   labelc1.setGeometry(714,300,72,96)
   labelc1.show()
 
-  #comm_hand = hand.Hand(comm_cards)
+  comm_hand = hand.Hand(comm_cards)
   for x in plyr_cards:
-    this_rank = hand_rank_7(comm_cards,x)
+    this_rank = hand.Hand(x).combine(comm_hand).hand_rank()
     plyr_ranks.append(this_rank)
     print(this_rank)
 
