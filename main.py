@@ -2,12 +2,17 @@
 import sys
 import random
 import deck
+import hand
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 #from PyQt5.QtGui import QImage, QPalette, QBrush, QPixmap
 from PyQt5.QtCore import *
+from itertools import combinations
 
+
+#These are the widgets which will end up displaying all our cards.
+global_c_count = 0
 
 plyr1 = [564,700]
 plyr2 = [300,600]
@@ -25,6 +30,30 @@ comm_cards = []
 
 deck = deck.Deck()
 deck.shuffle()
+
+def hand_rank_7(c_hand, hole_cards):
+#ranks a 7 card hand where self has the 5 community cards and cards = two hole cards
+  print(hole_cards)
+  c_hand.append(hole_cards[0])
+  c_hand.append(hole_cards[1])
+  #Just makes every possible combination, 7 choose 5
+  allpossibles = list(combinations(c_hand,5))
+  c_rank = []
+  i = 0
+  for c_hand in allpossibles:
+    this_hand = hand.Hand(list(c_hand))
+    this_hand.hand_print()
+    if i == 0:
+      c_rank = this_hand.hand_rank()
+      i = 1
+      continue
+    else:
+      test_rank = this_hand.hand_rank()
+      if(hand.compare_hrank(c_rank,test_rank) == 1):
+        c_rank = test_rank
+
+  print(c_rank)
+
 
 def deal():
 	#print("Made it here!")
@@ -127,6 +156,13 @@ def deal_river_card(MainWindow):
   labelc1.setGeometry(714,300,72,96)
   labelc1.show()
 
+  #comm_hand = hand.Hand(comm_cards)
+  hand_rank_7(comm_cards,plyr_cards[0])
+def reset_cards(MainWindow):
+  labels = MainWindow.findchildren()
+  print("here1")
+  print(labels)
+
 class MainWindow(QMainWindow):
   def __init__(self):
     QMainWindow.__init__(self)
@@ -168,6 +204,11 @@ class MainWindow(QMainWindow):
     deal_river.clicked.connect(lambda: deal_river_card(self))
     deal_river.resize(120,75)
     deal_river.move(4,425)
+
+    reset = QPushButton('Reset', self)
+    reset.clicked.connect(lambda: reset_cards(self))
+    reset.resize(120,75)
+    reset.move(4,350)
     #deal_button.show()
     self.show()
 

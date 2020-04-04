@@ -1,4 +1,6 @@
 from enum import Enum, unique
+from itertools import combinations
+
 
 import deck
 
@@ -14,6 +16,28 @@ class HandRank(Enum):
     FOUR_OF_A_KIND = 7
     STRAIGHT_FLUSH = 8
 
+def compare_hrank(rank0,rank1):
+    #Meant to tell which rank is higher from ranks returned by hand_rank
+    #0 for rank0, 1 for rank1, 2 for tie (split pot)
+    ans = 2
+    i = 0
+    for x in range(len(rank0)):
+        if i == 0:
+            i = 1 #only need .value for the first item which is an enum
+            if(rank0[x].value > rank1[x].value):
+                ans = 0
+                return ans
+            if(rank0[x].value < rank1[x].value):
+                ans = 1
+                return ans
+        else:
+            if(rank0[x] > rank1[x]):
+                ans = 0
+                return ans
+            if(rank0[x] < rank1[x]):
+                ans = 1
+                return ans
+    return ans;
 
 class Hand:
     """Class representing a hand of cards
@@ -30,8 +54,12 @@ class Hand:
         return Hand([deck.Card.from_str(s) for s in input_str.split(" ")])
 
     def __str__(self):
-        return " ".join(str(c) for c in self.cards) 
-        
+        return " ".join(str(c) for c in self.cards)
+
+    def hand_print(self):
+        for c in self.cards:
+            print(str(c)+ " "),  
+        print() 
     def hand_rank(self):
         """Return the best poker hand that can be made from these cards.
 
@@ -139,3 +167,24 @@ class Hand:
             pass
 
         return [HandRank.HIGH_CARD] + sorted_singles
+
+    def hand_rank_7(self, hole_cards):
+        #ranks a 7 card hand where self has the 5 community cards and cards = two hole cards
+        c_cards = self.cards
+        c_cards.append(hole_cards[0])
+        c_cards.append(hole_cards[1])
+        #Just makes every possible combination, 7 choose 5
+        allpossibles = list(combinations(c_cards,5))
+        c_rank = []
+        i = 0
+        for c_hand in allpossibles:
+            s
+            if i == 0:
+                c_rank = self.hand_rank(c_hand)
+                continue
+            else:
+                test_rank = hand_rank(c_hand)
+                if(compare_hrank(c_rank,test_rank) == 1):
+                    c_rank = test_rank
+
+        print(c_rank)
