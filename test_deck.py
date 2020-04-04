@@ -33,12 +33,11 @@ class CardTestCase(unittest.TestCase):
 class DeckTestCase(unittest.TestCase):
 
     def test_deal_one(self):
-        # TODO(matt): This will have to be updated when deal_one switches to returning a Card
         d = deck.Deck()
 
-        self.assertEqual("2c", d.deal_one())
-        self.assertEqual("3c", d.deal_one())
-        self.assertEqual("4c", d.deal_one())
+        self.assertEqual("2c", str(d.deal_one()))
+        self.assertEqual("3c", str(d.deal_one()))
+        self.assertEqual("4c", str(d.deal_one()))
 
     def test_deal_one_invalid(self):
         d = deck.Deck()
