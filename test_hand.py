@@ -17,6 +17,20 @@ class HandTestCase(unittest.TestCase):
                          h.cards)
         self.assertEqual("2s 3d 4h", str(h))
 
+    def test_hand_rank_ordering(self):
+        r1 = [hand.HandRank.FULL_HOUSE, 2, 3]
+        r2 = [hand.HandRank.FULL_HOUSE, 2, 3]
+        r3 = [hand.HandRank.TWO_PAIR, 10, 9, 8]
+
+        self.assertEqual(r1, r2)
+        self.assertNotEqual(r1, r3)
+        self.assertLess(r3, r1)
+        self.assertLessEqual(r3, r1)
+        self.assertLessEqual(r1, r2)
+        self.assertGreater(r1, r3)
+        self.assertGreaterEqual(r1, r3)
+        self.assertGreaterEqual(r1, r2)
+        
     def test_hand_rank_too_few_cards(self):
         with self.assertRaises(ValueError):
             hand.Hand.from_str("2s 3c").hand_rank()

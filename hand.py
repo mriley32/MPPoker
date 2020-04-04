@@ -1,10 +1,12 @@
 from enum import Enum, unique
-from itertools import combinations
+import functools
+import itertools
 
 
 import deck
 
 @unique
+@functools.total_ordering
 class HandRank(Enum):
     HIGH_CARD = 0
     ONE_PAIR = 1
@@ -16,6 +18,15 @@ class HandRank(Enum):
     FOUR_OF_A_KIND = 7
     STRAIGHT_FLUSH = 8
 
+    def __eq__(self, other):
+        return self.value == other.value
+
+    def __ne__(self, other):
+        return self.value != other.value
+
+    def __lt__(self, other):
+        return self.value < other.value
+    
 def compare_hrank(rank0,rank1):
     #Meant to tell which rank is higher from ranks returned by hand_rank
     #0 for rank0, 1 for rank1, 2 for tie (split pot)
@@ -60,6 +71,7 @@ class Hand:
         for c in self.cards:
             print(str(c)+ " "),  
         print() 
+
     def hand_rank(self):
         """Return the best poker hand that can be made from these cards.
 
@@ -72,10 +84,14 @@ class Hand:
         Raises:
           ValueError: if the hand has less than 5 cards
         """
-        if len(self.cards) != 5:
+        if len(self.cards) < 5:
             raise ValueError("Not enough cards ({}) in {} to get hand rank"
                              .format(len(self.cards), self))
 
+        if len(self.cards) > 5:
+            return max(Hand(list(cards)).hand_rank()
+                       for cards in itertools.combinations(self.cards, 5))
+        
         # To make finding the low straights easier, we'll keep two
         # versions of our rank counts, one with the low ace included
         # and one without.
@@ -174,7 +190,7 @@ class Hand:
         c_cards.append(hole_cards[0])
         c_cards.append(hole_cards[1])
         #Just makes every possible combination, 7 choose 5
-        allpossibles = list(combinations(c_cards,5))
+        allpossibles = list(itertools.combinations(c_cards,5))
         c_rank = []
         i = 0
         for c_hand in allpossibles:
