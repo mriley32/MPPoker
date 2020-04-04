@@ -67,11 +67,6 @@ class Hand:
     def __str__(self):
         return " ".join(str(c) for c in self.cards)
 
-    def hand_print(self):
-        for c in self.cards:
-            print(str(c)+ " "),  
-        print() 
-
     def hand_rank(self):
         """Return the best poker hand that can be made from these cards.
 

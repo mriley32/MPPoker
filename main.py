@@ -44,7 +44,7 @@ def hand_rank_7(c_hand, hole_cards):
   i = 0
   for c in allpossibles:
     this_hand = hand.Hand(list(c))
-    #this_hand.hand_print()
+    #print(str(this_hand))
     if i == 0:
       c_rank = this_hand.hand_rank()
       i = 1
