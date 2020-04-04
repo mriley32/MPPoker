@@ -27,22 +27,24 @@ all_plyr_coords = [plyr1,plyr2,plyr3,plyr4,plyr5,plyr6,plyr7,plyr8,plyr9]
 
 plyr_cards = []
 comm_cards = []
+plyr_ranks = []
 
 deck = deck.Deck()
 deck.shuffle()
 
 def hand_rank_7(c_hand, hole_cards):
 #ranks a 7 card hand where self has the 5 community cards and cards = two hole cards
-  print(hole_cards)
-  c_hand.append(hole_cards[0])
-  c_hand.append(hole_cards[1])
+  #print(hole_cards)
+  comm_cards = c_hand.copy()
+  comm_cards.append(hole_cards[0])
+  comm_cards.append(hole_cards[1])
   #Just makes every possible combination, 7 choose 5
-  allpossibles = list(combinations(c_hand,5))
+  allpossibles = list(combinations(comm_cards,5))
   c_rank = []
   i = 0
-  for c_hand in allpossibles:
-    this_hand = hand.Hand(list(c_hand))
-    this_hand.hand_print()
+  for c in allpossibles:
+    this_hand = hand.Hand(list(c))
+    #this_hand.hand_print()
     if i == 0:
       c_rank = this_hand.hand_rank()
       i = 1
@@ -53,6 +55,19 @@ def hand_rank_7(c_hand, hole_cards):
         c_rank = test_rank
 
   print(c_rank)
+  return c_rank
+
+def best_player():
+  #Just looks at all 9 players hand ranks and returns which one is best
+  ans = 8
+  c_rank = plyr_ranks[8]
+  for x in range(8):
+    new_rank = plyr_ranks[x]
+    if(hand.compare_hrank(c_rank,new_rank) == 1):
+      c_rank = new_rank
+      ans = x
+  #print(c_rank)
+  return ans
 
 
 def deal():
@@ -157,7 +172,20 @@ def deal_river_card(MainWindow):
   labelc1.show()
 
   #comm_hand = hand.Hand(comm_cards)
-  hand_rank_7(comm_cards,plyr_cards[0])
+  for x in plyr_cards:
+    this_rank = hand_rank_7(comm_cards,x)
+    plyr_ranks.append(this_rank)
+    print(this_rank)
+
+  best_plyr = best_player()
+
+  starlabel = QLabel(MainWindow)
+  starim = QPixmap("Images/Gold-Star.png")
+  starlabel.setPixmap(starim)
+  starlabel.setGeometry(all_plyr_coords[best_plyr][0],all_plyr_coords[best_plyr][1]-105,100,100)
+  print("Player: " + str(best_plyr + 1))
+  starlabel.show()
+
 def reset_cards(MainWindow):
   labels = MainWindow.findchildren()
   print("here1")
