@@ -12,7 +12,9 @@ from itertools import combinations
 
 
 #These are the widgets which will end up displaying all our cards.
+#We delete all these everytime a new hand is dealt
 global_c_count = 0
+card_widgets = []
 
 plyr1 = [564,700]
 plyr2 = [300,600]
@@ -42,26 +44,30 @@ def deal():
 	print(deck.deal_one())
 
 def deal_all_hole_cards(MainWindow):
+  global global_c_count
   for x in range(9):
     card_one = deck.deal_one()
     card_two = deck.deal_one()
     print(card_one)
     print(card_two)
-    labelc1 = QLabel(MainWindow)
-    labelc2 = QLabel(MainWindow)
+    card_widgets.append(QLabel(MainWindow))
     card1im = QPixmap("Images/Cards/"+str(card_one)+".png")
+    card_widgets[global_c_count].setPixmap(card1im)
+    card_widgets[global_c_count].setGeometry(all_plyr_coords[x][0],all_plyr_coords[x][1],72,96)
+    card_widgets[global_c_count].show()
+    global_c_count += 1;
+    
+    card_widgets.append(QLabel(MainWindow))
     card2im = QPixmap("Images/Cards/"+str(card_two)+".png")
-    labelc1.setPixmap(card1im)
-    labelc2.setPixmap(card2im)
-
-    labelc1.setGeometry(all_plyr_coords[x][0],all_plyr_coords[x][1],72,96)
-    labelc2.setGeometry(all_plyr_coords[x][0]+36,all_plyr_coords[x][1],72,96)
-
-    labelc1.show()
-    labelc2.show()
+    card_widgets[global_c_count].setPixmap(card2im)
+    card_widgets[global_c_count].setGeometry(all_plyr_coords[x][0]+36,all_plyr_coords[x][1],72,96)
+    card_widgets[global_c_count].show()
+    global_c_count += 1
     plyr_cards.append([card_one,card_two])
   #print(plyr_cards)
 
+#TODO MATT FIX TO HAVE LABELS BE DYNAMIC
+#Actually we won't really be using this too much right now, but still to do
 def deal_hole_cards(MainWindow, plyr_coords):
   card_one = deck.deal_one()
   card_two = deck.deal_one()
@@ -84,6 +90,8 @@ def deal_hole_cards(MainWindow, plyr_coords):
   labelc2.show()
 
 def deal_flop_cards(MainWindow):
+  global global_c_count
+
   card_one = deck.deal_one()
   card_two = deck.deal_one()
   card_three = deck.deal_one()
@@ -94,49 +102,51 @@ def deal_flop_cards(MainWindow):
   comm_cards.append(card_two)
   comm_cards.append(card_three)
 
-  labelc1 = QLabel(MainWindow)
-  labelc2 = QLabel(MainWindow)
-  labelc3 = QLabel(MainWindow)
+  card_widgets.append(QLabel(MainWindow))
+  card_widgets.append(QLabel(MainWindow))
+  card_widgets.append(QLabel(MainWindow))
   card1im = QPixmap("Images/Cards/"+str(card_one)+".png")
   card2im = QPixmap("Images/Cards/"+str(card_two)+".png")
   card3im = QPixmap("Images/Cards/"+str(card_three)+".png")
   
-  labelc1.setPixmap(card1im)
-  #labelc1.move(600,700)
-  labelc1.setGeometry(414,300,72,96)
-  labelc1.show()
+  card_widgets[global_c_count].setPixmap(card1im)
+  card_widgets[global_c_count].setGeometry(414,300,72,96)
+  card_widgets[global_c_count].show()
 
-  labelc2.setPixmap(card2im)
-  #labelc2.move(600,700)
-  labelc2.setGeometry(489,300,72,96)
-  labelc2.show()
+  card_widgets[global_c_count+1].setPixmap(card2im)
+  card_widgets[global_c_count+1].setGeometry(489,300,72,96)
+  card_widgets[global_c_count+1].show()
 
-  labelc3.setPixmap(card3im)
-  #labelc2.move(600,700)
-  labelc3.setGeometry(564,300,72,96)
-  labelc3.show()
+  card_widgets[global_c_count+2].setPixmap(card3im)
+  card_widgets[global_c_count+2].setGeometry(564,300,72,96)
+  card_widgets[global_c_count+2].show()
+  global_c_count += 3
 
 def deal_turn_card(MainWindow):
+  global global_c_count
   card_one = deck.deal_one()
   print(card_one)
   comm_cards.append(card_one)
 
-  labelc1 = QLabel(MainWindow)
+  card_widgets.append(QLabel(MainWindow))
   card1im = QPixmap("Images/Cards/"+str(card_one)+".png")
-  labelc1.setPixmap(card1im)
-  labelc1.setGeometry(639,300,72,96)
-  labelc1.show()
+  card_widgets[global_c_count].setPixmap(card1im)
+  card_widgets[global_c_count].setGeometry(639,300,72,96)
+  card_widgets[global_c_count].show()
+  global_c_count += 1
 
 def deal_river_card(MainWindow):
+  global global_c_count
   card_one = deck.deal_one()
   print(card_one)
   comm_cards.append(card_one)
 
-  labelc1 = QLabel(MainWindow)
+  card_widgets.append(QLabel(MainWindow))
   card1im = QPixmap("Images/Cards/"+str(card_one)+".png")
-  labelc1.setPixmap(card1im)
-  labelc1.setGeometry(714,300,72,96)
-  labelc1.show()
+  card_widgets[global_c_count].setPixmap(card1im)
+  card_widgets[global_c_count].setGeometry(714,300,72,96)
+  card_widgets[global_c_count].show()
+  global_c_count += 1
 
   comm_hand = hand.Hand(comm_cards)
   for x in plyr_cards:
@@ -146,17 +156,32 @@ def deal_river_card(MainWindow):
 
   best_plyr = best_player()
 
-  starlabel = QLabel(MainWindow)
+  card_widgets.append(QLabel(MainWindow))
   starim = QPixmap("Images/Gold-Star.png")
-  starlabel.setPixmap(starim)
-  starlabel.setGeometry(all_plyr_coords[best_plyr][0],all_plyr_coords[best_plyr][1]-105,100,100)
+  card_widgets[global_c_count].setPixmap(starim)
+  card_widgets[global_c_count].setGeometry(all_plyr_coords[best_plyr][0],all_plyr_coords[best_plyr][1]-105,100,100)
   print("Player: " + str(best_plyr + 1))
-  starlabel.show()
+  card_widgets[global_c_count].show()
+  global_c_count += 1
 
 def reset_cards(MainWindow):
-  labels = MainWindow.findchildren()
+  #reshuffle deck obviously and remove card images
+  global global_c_count
+  global_c_count = 0
+  deck.shuffle()
+  for x in card_widgets:
+    x.hide()
+    x.destroy()
   print("here1")
-  print(labels)
+  print(card_widgets)
+  print("here2")
+  card_widgets.clear()
+  comm_cards.clear()
+  plyr_ranks.clear()
+  plyr_cards.clear()
+  print(card_widgets)
+
+  
 
 class MainWindow(QMainWindow):
   def __init__(self):
