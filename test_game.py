@@ -120,6 +120,40 @@ class MainStatesTestCase(unittest.TestCase):
         self.assertIsNotNone(self.manager.button_pos)
         with self.assertRaises(game.WrongStateError):
             self.manager.start_game()
+
+    def test_multiple_proceed(self):
+        self.manager.start_game()
+        self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.FLOP_DEALT, self.manager.state)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.TURN_DEALT, self.manager.state)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.RIVER_DEALT, self.manager.state)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+
+    def test_paying_out_to_waiting(self):
+        self.manager.start_game()
+        # Kind of a dumb test because it's relying on 6 stages to get
+        # to paying out, but we'll deal with it later.
+        for _ in range(6):
+            self.manager.proceed()
+        self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
+        for idx in [2, 4]:
+            self.manager.remove_player(idx)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.WAITING_FOR_START, self.manager.state)
+
+    def test_proceed_from_waiting(self):
+        with self.assertRaises(game.WaitingForStartError):
+            self.manager.proceed()
         
 
     

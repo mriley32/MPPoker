@@ -20,7 +20,13 @@ class WrongStateError(Exception):
     def __init__(self, expected, actual):
         self.expected_state = expected
         self.actual_state = actual
-        
+
+class NotReadyError(Exception):
+    pass
+
+class WaitingForStartError(NotReadyError):
+    pass
+
         
 class Player:
     """Player represents the state of of the player.
@@ -200,7 +206,38 @@ class Manager:
         if self.num_players() <= 1:
             raise NotEnoughPlayersError()
         self._advance_button()
+        # TODO: create the Hand
         self.state = GameState.PRE_DEAL
+
+    def proceed(self):
+        if self.state == GameState.WAITING_FOR_START:
+            raise WaitingForStartError()
+        elif self.state == GameState.PRE_DEAL:
+            # TODO: create the Hand, deal the cards
+            self.state = GameState.HOLE_CARDS_DEALT
+        elif self.state == GameState.HOLE_CARDS_DEALT:
+            # TODO: deal flop
+            self.state = GameState.FLOP_DEALT
+        elif self.state == GameState.FLOP_DEALT:
+            # TODO: deal turn
+            self.state = GameState.TURN_DEALT
+        elif self.state == GameState.TURN_DEALT:
+            # TODO: deal river
+            self.state = GameState.RIVER_DEALT
+        elif self.state == GameState.RIVER_DEALT:
+            # TODO: rank the hands, pick winner
+            self.state = GameState.SHOWDOWN
+        elif self.state == GameState.SHOWDOWN:
+            self.state = GameState.PAYING_OUT
+        elif self.state == GameState.PAYING_OUT:
+            # TODO: destroy the Hand, deal with the payout,
+            # (maybe) create new Hand
+            if self.num_players() > 1:
+                self.state = GameState.PRE_DEAL
+            else:
+                self.state = GameState.WAITING_FOR_START
+        else:
+            raise ValueError("Unknown state {}".format(self.state))
         
     def _advance_button(self):
         if self.button_pos is None:
