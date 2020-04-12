@@ -16,7 +16,7 @@ class NoSuchPlayerError(Exception):
 class Player:
     """Player represents the state of of the player.
 
-    Note that this does not cover the state inside of a deal"""
+    Note that this does not cover the state inside of a deal."""
 
     def __init__(self, name, stack):
         self.name = name
@@ -32,13 +32,14 @@ class EventType(enum.Enum):
     PLAYER_ADDED = 0
     PLAYER_REMOVED = 1        
 
+    
 class Event:
-    """Events are for communicating out what has happened.
+    """Events are for communicating out what has happened in the game.
 
     In order to keep a clean interface between the Manager and the
     parts of the system that need to respond to changes in the game,
     objects can subscribe as listeners in a Manager and be passed
-    Event objects telling them all the important things in the game.
+    Event objects telling them when things happen in the game.
     
     Attributes:
       event_type: the type of event (one of the enum EventType)
@@ -49,8 +50,6 @@ class Event:
       PLAYER_ADDED: player(of type Player)
       PLAYER_REMOVED: player(of type Player)
     """
-
-    
     def __init__(self, event_type, **kwargs):
         self.event_type = event_type
         self.args = kwargs
@@ -68,7 +67,7 @@ class Manager:
     See the Event documention for a discussion of the listener setup.
 
     Note that the notication should happen as the last possible thing in the
-    various acitivities. The listeners may want to access the state of the Manager
+    various functions. The listeners may want to access the state of the Manager
     in response to a notificaiton, so the Manager needs to be in a clean state.
     """
 
