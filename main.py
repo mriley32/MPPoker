@@ -2,7 +2,7 @@
 import sys
 import random
 import deck
-import hand
+import cards
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -148,9 +148,9 @@ def deal_river_card(MainWindow):
   card_widgets[global_c_count].show()
   global_c_count += 1
 
-  comm_hand = hand.Hand(comm_cards)
+  comm_hand = cards.Cards(comm_cards)
   for x in plyr_cards:
-    this_rank = hand.Hand(x).combine(comm_hand).hand_rank()
+    this_rank = cards.Cards(x).combine(comm_hand).hand_rank()
     plyr_ranks.append(this_rank)
     print(this_rank)
 

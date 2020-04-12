@@ -28,7 +28,7 @@ class HandRank(Enum):
         return self.value < other.value
     
 
-class Hand:
+class Cards:
     """Class representing a hand of cards
 
     Attributes:
@@ -40,14 +40,14 @@ class Hand:
         self.cards = cards.copy()
 
     def from_str(input_str):
-        return Hand([deck.Card.from_str(s) for s in input_str.split(" ")])
+        return Cards([deck.Card.from_str(s) for s in input_str.split(" ")])
 
     def __str__(self):
         return " ".join(str(c) for c in self.cards)
 
     def combine(self, other):
         """Returns a new hand with a combination of the cards in both."""
-        return Hand(self.cards + other.cards)
+        return Cards(self.cards + other.cards)
     
     def hand_rank(self):
         """Return the best poker hand that can be made from these cards.
@@ -66,7 +66,7 @@ class Hand:
                              .format(len(self.cards), self))
 
         if len(self.cards) > 5:
-            return max(Hand(list(cards)).hand_rank()
+            return max(Cards(list(cards)).hand_rank()
                        for cards in itertools.combinations(self.cards, 5))
         
         # To make finding the low straights easier, we'll keep two
