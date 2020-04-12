@@ -3,7 +3,7 @@ import unittest
 import game
 
 
-class ManagerTestCase(unittest.TestCase):
+class AddRemoveTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = game.Manager()
         self.recorder = game.RecordingListener()
@@ -53,6 +53,73 @@ class ManagerTestCase(unittest.TestCase):
         with self.assertRaises(game.NoSuchPlayerError):
             self.manager.remove_player(9999)
 
+
+class AdvanceButtonTestCase(unittest.TestCase):
+    def setUp(self):
+        self.manager = game.Manager()
+        # We'll create players in postiions 0, 2, 3, and 7
+        for idx in range(game.MAX_PLAYERS):
+            self.manager.add_player(game.Player("name{}".format(idx), 0))
+        for idx in [1, 4, 5, 6, 8, 9]:
+            self.manager.remove_player(idx)
+
+    def test_from_none(self):
+        for repeat in range(20):
+            self.manager.button_pos = None
+            self.manager._advance_button()
+            self.assertIn(self.manager.button_pos, [0, 2, 3, 7])
+
+    def test_cycle(self):
+        self.manager.button_pos = 9
+        self.manager._advance_button()
+        self.assertEqual(0, self.manager.button_pos)
+        self.manager._advance_button()
+        self.assertEqual(2, self.manager.button_pos)
+        self.manager._advance_button()
+        self.assertEqual(3, self.manager.button_pos)
+        self.manager._advance_button()
+        self.assertEqual(7, self.manager.button_pos)
+        self.manager._advance_button()
+        self.assertEqual(0, self.manager.button_pos)
+
+    def test_single_player(self):
+        for idx in [0, 3, 7]:
+            self.manager.remove_player(idx)
+        self.manager.button_pos = 0
+        self.manager._advance_button()
+        self.assertEqual(2, self.manager.button_pos)
+        self.manager._advance_button()
+        self.assertEqual(2, self.manager.button_pos)
+
+    def test_no_player(self):
+        self.manager._advance_button()
+        for idx in [0, 2, 3, 7]:
+            self.manager.remove_player(idx)
+        self.assertIsNotNone(self.manager.button_pos)
+        self.assertEqual(0, self.manager.num_players())
+        with self.assertRaises(game.NotEnoughPlayersError):
+            self.manager._advance_button()
+        self.assertIsNone(self.manager.button_pos)
+        with self.assertRaises(game.NotEnoughPlayersError):
+            self.manager._advance_button()
+        self.assertIsNone(self.manager.button_pos)
+        
+        
+class MainStatesTestCase(unittest.TestCase):
+    def setUp(self):
+        self.manager = game.Manager()
+        # We'll create players in postiions 0, 2, 4
+        for idx in range(5):
+            self.manager.add_player(game.Player("name{}".format(idx), 0))
+        for idx in [1, 3]:
+            self.manager.remove_player(idx)
+
+    def test_start_game(self):
+        self.manager.start_game()
+        self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+        self.assertIsNotNone(self.manager.button_pos)
+        with self.assertRaises(game.WrongStateError):
+            self.manager.start_game()
         
 
     

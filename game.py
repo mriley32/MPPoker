@@ -1,6 +1,7 @@
 """Game manages the poker game and the state of the players."""
 
 import enum
+import random
 
 MAX_PLAYERS = 10
 
@@ -12,6 +13,14 @@ class NoSuchPlayerError(Exception):
     def __init__(self, player_idx):
         self.player_idx = player_idx
 
+class NotEnoughPlayersError(Exception):
+    pass
+
+class WrongStateError(Exception):
+    def __init__(self, expected, actual):
+        self.expected_state = expected
+        self.actual_state = actual
+        
         
 class Player:
     """Player represents the state of of the player.
@@ -26,7 +35,8 @@ class Player:
     def __str__(self):
         return "Player({}, {}, {})".format(
             self.name, self.stack, self.position)
-        
+
+    
 @enum.unique
 class EventType(enum.Enum):
     PLAYER_ADDED = 0
@@ -60,7 +70,41 @@ class Event:
             args_strs.append("{}={}".format(key, self.args[key]))
         return "Event({}, {})".format(self.event_type, ", ".join(args_strs))
 
+    
+class HandPlayer:
+    """Controls the state of a player for one deal/pot."""
+    def __init__(self, player):
+        """Initialize HandPLayer
         
+        Args:
+          player: Player
+        """
+        self.base_player = player
+        self.initial_stack = player.stack
+        self.cards = None
+
+        
+class Hand:
+    """Hnad controls the state for one deal/pot."""
+    def __init__(self, players, button_pos):
+        self.players = [HandPlayer(p) for p in players]
+        self.button_pos = button_pos
+        if self.players[button_pos] is None:
+            raise ValueError("No player on button {}".format(button_pos))
+
+        
+@enum.unique
+class GameState(enum.Enum):
+    WAITING_FOR_START = 0
+    PRE_DEAL = 1
+    HOLE_CARDS_DEALT = 2
+    FLOP_DEALT = 3
+    TURN_DEALT = 4
+    RIVER_DEALT = 5
+    SHOWDOWN = 6
+    PAYING_OUT = 7
+    
+    
 class Manager:
     """Manager is the main class for managing the flow of the game.
 
@@ -69,11 +113,27 @@ class Manager:
     Note that the notication should happen as the last possible thing in the
     various functions. The listeners may want to access the state of the Manager
     in response to a notificaiton, so the Manager needs to be in a clean state.
+
+    The manager has a core concept of a current state. THe state
+    proceeds under various actions / conditions as below. The main way
+    to continue the game is to call proceed(). If the game can
+    proceed, an exception derived from NotReadyError will be raised.
+
+    WAITING_FOR_START: to PRE_DEAL on start_game()
+    PRE_DEAL: to HOLE_CARDS_DEALT on proceed()
+    HOLE_CARDS_DEALT: to FLOP_DEALT on proceed()
+    FLOP_DEALT: to TURN_DEALT on proceed()
+    RIVER_DEALT: to SHOWDOWN on proceed()
+    SHOWDOWN: to PAYING_OUT on proceed()
+    PAYING_OUT: to PRE_DEAL or WAITING_FOR_START depending on number of player
+        on proceed()
     """
 
     def __init__(self):
         self.players = [None] * MAX_PLAYERS
-        self.listeners = []
+        self.button_pos = None
+        self.state= GameState.WAITING_FOR_START
+        self._listeners = []
 
     def add_listener(self, listener):
         """Adds an Event listener.
@@ -82,7 +142,7 @@ class Manager:
           listener: The only requirement on listener is that it has a notify
                     method that accepts one positional Event argument.
         """
-        self.listeners.append(listener)
+        self._listeners.append(listener)
         
     def add_player(self, player):
 
@@ -131,8 +191,37 @@ class Manager:
         
         return removed
 
+    def num_players(self):
+        return sum(1 for p in self.players if p is not None)
+    
+    def start_game(self):
+        if self.state != GameState.WAITING_FOR_START:
+            raise WrongStateError(GameState.WAITING_FOR_START, self.state)
+        if self.num_players() <= 1:
+            raise NotEnoughPlayersError()
+        self._advance_button()
+        self.state = GameState.PRE_DEAL
+        
+    def _advance_button(self):
+        if self.button_pos is None:
+            if self.num_players() == 0:
+                raise NotEnoughPlayersError()
+            self.button_pos = random.choice(
+                [i for i, p in enumerate(self.players) if p is not None])
+        else:
+            chosen_button = None
+            for offset in range(1, MAX_PLAYERS + 1):
+                try_pos = (self.button_pos + offset) % MAX_PLAYERS
+                if self.players[try_pos] is not None:
+                    chosen_button = try_pos
+                    break
+            if chosen_button is None:
+                self.button_pos = None
+                raise NotEnoughPlayersError()
+            self.button_pos = chosen_button
+        
     def _notify(self, event):
-        for listener in self.listeners:
+        for listener in self._listeners:
             listener.notify(event)
 
 
