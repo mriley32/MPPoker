@@ -148,9 +148,9 @@ def deal_river_card(MainWindow):
   card_widgets[global_c_count].show()
   global_c_count += 1
 
-  comm_hand = cards.Cards(comm_cards)
+  comm_hand = cards.PlayerCards(comm_cards)
   for x in plyr_cards:
-    this_rank = cards.Cards(x).combine(comm_hand).hand_rank()
+    this_rank = cards.PlayerCards(x).combine(comm_hand).hand_rank()
     plyr_ranks.append(this_rank)
     print(this_rank)
 

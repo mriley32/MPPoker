@@ -3,6 +3,9 @@
 import enum
 import random
 
+import cards
+import deck
+
 MAX_PLAYERS = 10
 
 class GameFullError(Exception):
@@ -88,13 +91,15 @@ class HandPlayer:
         self.base_player = player
         self.initial_stack = player.stack
         self.cards = None
-
+        
         
 class Hand:
     """Hnad controls the state for one deal/pot."""
     def __init__(self, players, button_pos):
+        self.deck = deck.Deck()
         self.players = [HandPlayer(p) for p in players]
         self.button_pos = button_pos
+        self.board = cards.Cards()
         if self.players[button_pos] is None:
             raise ValueError("No player on button {}".format(button_pos))
 
@@ -139,6 +144,7 @@ class Manager:
         self.players = [None] * MAX_PLAYERS
         self.button_pos = None
         self.state= GameState.WAITING_FOR_START
+        self.current_hand = None
         self._listeners = []
 
     def add_listener(self, listener):
@@ -206,7 +212,7 @@ class Manager:
         if self.num_players() <= 1:
             raise NotEnoughPlayersError()
         self._advance_button()
-        # TODO: create the Hand
+        self._create_hand()
         self.state = GameState.PRE_DEAL
 
     def proceed(self):
@@ -257,6 +263,11 @@ class Manager:
                 raise NotEnoughPlayersError()
             self.button_pos = chosen_button
         
+    def _create_hand(self):
+        if self.current_hand is not None:
+            raise ValueError("Can not create hand while one in progress")
+        self.current_hand = Hand(self.players, self.button_pos)
+            
     def _notify(self, event):
         for listener in self._listeners:
             listener.notify(event)
