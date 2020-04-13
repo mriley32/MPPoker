@@ -124,20 +124,30 @@ class MainStatesTestCase(unittest.TestCase):
     def test_multiple_proceed(self):
         self.manager.start_game()
         self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+
         self.manager.proceed()
         self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
         for idx in [0, 2, 4]:
             self.assertEqual(2, len(self.manager.current_hand.players[idx].hole_cards.cards))
+
         self.manager.proceed()
         self.assertEqual(game.GameState.FLOP_DEALT, self.manager.state)
+        self.assertEqual(3, len(self.manager.current_hand.board.cards))
+
         self.manager.proceed()
         self.assertEqual(game.GameState.TURN_DEALT, self.manager.state)
+        self.assertEqual(4, len(self.manager.current_hand.board.cards))
+
         self.manager.proceed()
         self.assertEqual(game.GameState.RIVER_DEALT, self.manager.state)
+        self.assertEqual(5, len(self.manager.current_hand.board.cards))
+
         self.manager.proceed()
         self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
+
         self.manager.proceed()
         self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
+
         self.manager.proceed()
         self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
 

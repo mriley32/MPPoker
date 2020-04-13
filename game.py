@@ -30,7 +30,7 @@ class NotReadyError(Exception):
 class WaitingForStartError(NotReadyError):
     pass
 
-        
+
 class Player:
     """Player represents the state of of the player.
 
@@ -45,13 +45,13 @@ class Player:
         return "Player({}, {}, {})".format(
             self.name, self.stack, self.position)
 
-    
+
 @enum.unique
 class EventType(enum.Enum):
     PLAYER_ADDED = 0
-    PLAYER_REMOVED = 1        
+    PLAYER_REMOVED = 1
 
-    
+
 class Event:
     """Events are for communicating out what has happened in the game.
 
@@ -59,7 +59,7 @@ class Event:
     parts of the system that need to respond to changes in the game,
     objects can subscribe as listeners in a Manager and be passed
     Event objects telling them when things happen in the game.
-    
+
     Attributes:
       event_type: the type of event (one of the enum EventType)
       args: a dictionary with the arguments for this event. The expected contents
@@ -79,20 +79,20 @@ class Event:
             args_strs.append("{}={}".format(key, self.args[key]))
         return "Event({}, {})".format(self.event_type, ", ".join(args_strs))
 
-    
+
 class HandPlayer:
     """Controls the state of a player for one deal/pot."""
     def __init__(self, player):
         """Initialize HandPLayer
-        
+
         Args:
           player: Player
         """
         self.base_player = player
         self.initial_stack = player.stack
         self.hole_cards = None
-        
-        
+
+
 class Hand:
     """Hand controls the state for one deal/pot."""
     def __init__(self, players, button_pos):
@@ -114,7 +114,16 @@ class Hand:
             if p is None:
                 continue
             p.hole_cards = cards.PlayerCards(self.deck.deal(2))
-        
+
+    def deal_flop(self):
+        self.board.cards.extend(self.deck.deal(3))
+
+    def deal_turn(self):
+        self.board.cards.extend(self.deck.deal(1))
+
+    def deal_river(self):
+        self.board.cards.extend(self.deck.deal(1))
+
 @enum.unique
 class GameState(enum.Enum):
     WAITING_FOR_START = 0
@@ -125,8 +134,8 @@ class GameState(enum.Enum):
     RIVER_DEALT = 5
     SHOWDOWN = 6
     PAYING_OUT = 7
-    
-    
+
+
 class Manager:
     """Manager is the main class for managing the flow of the game.
 
@@ -160,13 +169,13 @@ class Manager:
 
     def add_listener(self, listener):
         """Adds an Event listener.
-        
+
         Args:
           listener: The only requirement on listener is that it has a notify
                     method that accepts one positional Event argument.
         """
         self._listeners.append(listener)
-        
+
     def add_player(self, player):
 
         """Add a player to the game
@@ -187,9 +196,9 @@ class Manager:
             self.players[idx] = player
             self._notify(Event(EventType.PLAYER_ADDED, player=player))
             return idx
-        
+
         raise GameFullError()
-    
+
     def remove_player(self, player_idx):
         """Removes a player from the game
 
@@ -206,17 +215,17 @@ class Manager:
                 raise NoSuchPlayerError(player_idx)
         except IndexError:
             raise NoSuchPlayerError(player_idx)
-        
+
         removed = self.players[player_idx]
         self.players[player_idx] = None
 
         self._notify(Event(EventType.PLAYER_REMOVED, player=removed))
-        
+
         return removed
 
     def num_players(self):
         return sum(1 for p in self.players if p is not None)
-    
+
     def start_game(self):
         if self.state != GameState.WAITING_FOR_START:
             raise WrongStateError(GameState.WAITING_FOR_START, self.state)
@@ -233,13 +242,13 @@ class Manager:
             self.current_hand.deal_hole_cards()
             self.state = GameState.HOLE_CARDS_DEALT
         elif self.state == GameState.HOLE_CARDS_DEALT:
-            # TODO: deal flop
+            self.current_hand.deal_flop()
             self.state = GameState.FLOP_DEALT
         elif self.state == GameState.FLOP_DEALT:
-            # TODO: deal turn
+            self.current_hand.deal_turn()
             self.state = GameState.TURN_DEALT
         elif self.state == GameState.TURN_DEALT:
-            # TODO: deal river
+            self.current_hand.deal_river()
             self.state = GameState.RIVER_DEALT
         elif self.state == GameState.RIVER_DEALT:
             # TODO: rank the hands, pick winner
@@ -255,7 +264,7 @@ class Manager:
                 self.state = GameState.WAITING_FOR_START
         else:
             raise ValueError("Unknown state {}".format(self.state))
-        
+
     def _advance_button(self):
         if self.button_pos is None:
             if self.num_players() == 0:
@@ -273,12 +282,12 @@ class Manager:
                 self.button_pos = None
                 raise NotEnoughPlayersError()
             self.button_pos = chosen_button
-        
+
     def _create_hand(self):
         if self.current_hand is not None:
             raise ValueError("Can not create hand while one in progress")
         self.current_hand = Hand(self.players, self.button_pos)
-            
+
     def _notify(self, event):
         for listener in self._listeners:
             listener.notify(event)
@@ -291,6 +300,6 @@ class RecordingListener:
 
     def clear(self):
         self.events.clear()
-        
+
     def notify(self, event):
         self.events.append(event)
