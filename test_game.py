@@ -126,6 +126,8 @@ class MainStatesTestCase(unittest.TestCase):
         self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
         self.manager.proceed()
         self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
+        for idx in [0, 2, 4]:
+            self.assertEqual(2, len(self.manager.current_hand.players[idx].hole_cards.cards))
         self.manager.proceed()
         self.assertEqual(game.GameState.FLOP_DEALT, self.manager.state)
         self.manager.proceed()

@@ -90,19 +90,30 @@ class HandPlayer:
         """
         self.base_player = player
         self.initial_stack = player.stack
-        self.cards = None
+        self.hole_cards = None
         
         
 class Hand:
-    """Hnad controls the state for one deal/pot."""
+    """Hand controls the state for one deal/pot."""
     def __init__(self, players, button_pos):
         self.deck = deck.Deck()
-        self.players = [HandPlayer(p) for p in players]
+        self.deck.shuffle()
+        self.players = []
+        for p in players:
+            if p is None:
+                self.players.append(None)
+            else:
+                self.players.append(HandPlayer(p))
         self.button_pos = button_pos
-        self.board = cards.Cards()
+        self.board = cards.PlayerCards()
         if self.players[button_pos] is None:
             raise ValueError("No player on button {}".format(button_pos))
 
+    def deal_hole_cards(self):
+        for p in self.players:
+            if p is None:
+                continue
+            p.hole_cards = cards.PlayerCards(self.deck.deal(2))
         
 @enum.unique
 class GameState(enum.Enum):
@@ -178,7 +189,7 @@ class Manager:
             return idx
         
         raise GameFullError()
-
+    
     def remove_player(self, player_idx):
         """Removes a player from the game
 
@@ -219,7 +230,7 @@ class Manager:
         if self.state == GameState.WAITING_FOR_START:
             raise WaitingForStartError()
         elif self.state == GameState.PRE_DEAL:
-            # TODO: create the Hand, deal the cards
+            self.current_hand.deal_hole_cards()
             self.state = GameState.HOLE_CARDS_DEALT
         elif self.state == GameState.HOLE_CARDS_DEALT:
             # TODO: deal flop
