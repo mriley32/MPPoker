@@ -39,6 +39,15 @@ class DeckTestCase(unittest.TestCase):
         self.assertEqual("3c", str(d.deal_one()))
         self.assertEqual("4c", str(d.deal_one()))
 
+    def test_deal(self):
+        d = deck.Deck()
+
+        actual = d.deal(3)
+        self.assertEqual(3, len(actual))
+        self.assertEqual("2c", str(actual[0]))
+        self.assertEqual("3c", str(actual[1]))
+        self.assertEqual("4c", str(actual[2]))
+
     def test_deal_one_invalid(self):
         d = deck.Deck()
         for _ in range(52):
@@ -47,7 +56,6 @@ class DeckTestCase(unittest.TestCase):
             d.deal_one()
 
     def test_shuffle(self):
-        # TODO(matt): This will have to be updated when deal_one switches to returning a Card
         # It's annoying hard to test a shuffle. We'll just make sure it runs and the first two cards are different.
         d = deck.Deck()
         d.shuffle()

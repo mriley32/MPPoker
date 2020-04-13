@@ -46,6 +46,10 @@ class Deck:
         random.shuffle(self.our_deck)
         self.next_card_idx = 0
 
+    def deal(self, num):
+        self.next_card_idx += num
+        return self.our_deck[self.next_card_idx - num: self.next_card_idx]
+
     def deal_one(self):
-        self.next_card_idx += 1
-        return self.our_deck[self.next_card_idx - 1]
+        return self.deal(1)[0]
+
