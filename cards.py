@@ -8,6 +8,7 @@ import deck
 @unique
 @functools.total_ordering
 class HandRank(Enum):
+    NO_HAND = -1
     HIGH_CARD = 0
     ONE_PAIR = 1
     TWO_PAIR = 2

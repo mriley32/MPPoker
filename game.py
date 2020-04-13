@@ -105,9 +105,10 @@ class Hand:
             else:
                 self.players.append(HandPlayer(p))
         self.button_pos = button_pos
-        self.board = cards.PlayerCards()
         if self.players[button_pos] is None:
             raise ValueError("No player on button {}".format(button_pos))
+        self.winners = None
+        self.board = cards.PlayerCards()
 
     def deal_hole_cards(self):
         for p in self.players:
@@ -124,6 +125,17 @@ class Hand:
     def deal_river(self):
         self.board.cards.extend(self.deck.deal(1))
 
+    def showdown(self):
+        ranks = []
+        for p in self.players:
+            if p is None or p.hole_cards is None:
+                ranks.append([cards.HandRank.NO_HAND])
+                continue
+            ranks.append(p.hole_cards.combine(self.board).hand_rank())
+        best_hand = max(ranks)
+        self.winners = [i for i, rank in enumerate(ranks) if rank == best_hand]
+
+        
 @enum.unique
 class GameState(enum.Enum):
     WAITING_FOR_START = 0
@@ -251,7 +263,7 @@ class Manager:
             self.current_hand.deal_river()
             self.state = GameState.RIVER_DEALT
         elif self.state == GameState.RIVER_DEALT:
-            # TODO: rank the hands, pick winner
+            self.current_hand.showdown()
             self.state = GameState.SHOWDOWN
         elif self.state == GameState.SHOWDOWN:
             self.state = GameState.PAYING_OUT

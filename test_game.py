@@ -1,5 +1,6 @@
 import unittest
 
+import cards
 import game
 
 
@@ -144,6 +145,7 @@ class MainStatesTestCase(unittest.TestCase):
 
         self.manager.proceed()
         self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
+        self.assertGreater(len(self.manager.current_hand.winners), 0)
 
         self.manager.proceed()
         self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
@@ -166,6 +168,65 @@ class MainStatesTestCase(unittest.TestCase):
     def test_proceed_from_waiting(self):
         with self.assertRaises(game.WaitingForStartError):
             self.manager.proceed()
+
+
+class ShowdownTestCase(unittest.TestCase):
+    def setUp(self):
+        self.manager = game.Manager()
+        # We'll create players in postiions 0, 2, 4
+        for idx in range(5):
+            self.manager.add_player(game.Player("name{}".format(idx), 0))
+        for idx in [1, 3]:
+            self.manager.remove_player(idx)
+        # Advance the game to just before showdown. The test cases
+        # will mess with the cards tehmselves.
+        self.manager.start_game()
+        # Kind of a dumb test because it's relying on the number of
+        # stages to get to RIVER_DEALT, but we'll deal with it later.
+        for _ in range(4):
+            self.manager.proceed()
+        self.assertEqual(game.GameState.RIVER_DEALT, self.manager.state)
+
+    def test_single_winner(self):
+        self.manager.current_hand.board = (
+            cards.PlayerCards.from_str("Ac Kd Qh Jd 5c"))
+        self.manager.current_hand.players[0].hole_cards = (
+            cards.PlayerCards.from_str("Ks 2c"))
+        self.manager.current_hand.players[2].hole_cards = (
+            cards.PlayerCards.from_str("As 3c"))
+        self.manager.current_hand.players[4].hole_cards = (
+            cards.PlayerCards.from_str("Js 4c"))
+        self.assertIsNone(self.manager.current_hand.winners)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
+        self.assertEqual([2], self.manager.current_hand.winners)
+        
+    def test_two_winner(self):
+        self.manager.current_hand.board = (
+            cards.PlayerCards.from_str("Ac Kc 2h 3h 4h"))
+        self.manager.current_hand.players[0].hole_cards = (
+            cards.PlayerCards.from_str("As Ks"))
+        self.manager.current_hand.players[2].hole_cards = (
+            cards.PlayerCards.from_str("Ad Kd"))
+        self.manager.current_hand.players[4].hole_cards = (
+            cards.PlayerCards.from_str("Jd Td"))
+        self.assertIsNone(self.manager.current_hand.winners)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
+        self.assertEqual([0, 2], self.manager.current_hand.winners)
+
+    def test_play_the_board_missing_player(self):
+        self.manager.current_hand.board = (
+            cards.PlayerCards.from_str("Ac Kd Qh Jd Tc"))
+        self.manager.current_hand.players[0].hole_cards = (
+            cards.PlayerCards.from_str("Ks 2c"))
+        self.manager.current_hand.players[2].hole_cards = None
+        self.manager.current_hand.players[4].hole_cards = (
+            cards.PlayerCards.from_str("Js 4c"))
+        self.assertIsNone(self.manager.current_hand.winners)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
+        self.assertEqual([0, 4], self.manager.current_hand.winners)
         
 
     
