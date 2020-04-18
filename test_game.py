@@ -109,6 +109,7 @@ class AdvanceButtonTestCase(unittest.TestCase):
 class MainStatesTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = game.Manager()
+        self.manager._shuffle_deck = False
         # We'll create players in postiions 0, 2, 4
         for idx in range(5):
             self.manager.add_player(game.Player("name{}".format(idx), 0))
@@ -117,7 +118,9 @@ class MainStatesTestCase(unittest.TestCase):
         # Add the recorder last because we don't care about the add/remove events.
         self.recorder = game.RecordingListener()
         self.manager.add_listener(self.recorder)
-
+        # we do long string diffs
+        self.maxDiff = None
+        
     def test_start_game(self):
         self.manager.start_game()
         self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
@@ -150,9 +153,20 @@ class MainStatesTestCase(unittest.TestCase):
         for idx in [0, 2, 4]:
             self.assertEqual(2, len(self.manager.current_hand.players[idx].hole_cards.cards))
         self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(game.EventType.HOLE_CARDS_DEALT,
+                         self.recorder.events[0].event_type)
         self.assertEqual(
-            "Event(EventType.WAITING_FOR_START, )",
-            str(self.recorder.events[0]))
+            "2c 3c, " +
+            "None, " +
+            "4c 5c, " +
+            "None, " +
+            "6c 7c, " +
+            "None, " +
+            "None, " +
+            "None, " +
+            "None, " +
+            "None",
+            ', '.join(str(p) for p in self.recorder.events[0].args["cards"]))
 
         self.recorder.clear()
         self.manager.proceed()
@@ -160,7 +174,7 @@ class MainStatesTestCase(unittest.TestCase):
         self.assertEqual(3, len(self.manager.current_hand.board.cards))
         self.assertEqual(1, len(self.recorder.events))
         self.assertEqual(
-            "Event(EventType.WAITING_FOR_START, )",
+            "Event(EventType.FLOP_DEALT, cards=8c 9c Tc)",
             str(self.recorder.events[0]))
 
         self.recorder.clear()
@@ -169,7 +183,7 @@ class MainStatesTestCase(unittest.TestCase):
         self.assertEqual(4, len(self.manager.current_hand.board.cards))
         self.assertEqual(1, len(self.recorder.events))
         self.assertEqual(
-            "Event(EventType.WAITING_FOR_START, )",
+            "Event(EventType.TURN_DEALT, card=Jc)",
             str(self.recorder.events[0]))
 
         self.recorder.clear()
@@ -178,7 +192,7 @@ class MainStatesTestCase(unittest.TestCase):
         self.assertEqual(5, len(self.manager.current_hand.board.cards))
         self.assertEqual(1, len(self.recorder.events))
         self.assertEqual(
-            "Event(EventType.WAITING_FOR_START, )",
+            "Event(EventType.RIVER_DEALT, card=Qc)",
             str(self.recorder.events[0]))
 
         self.recorder.clear()
@@ -187,7 +201,20 @@ class MainStatesTestCase(unittest.TestCase):
         self.assertGreater(len(self.manager.current_hand.winners), 0)
         self.assertEqual(1, len(self.recorder.events))
         self.assertEqual(
-            "Event(EventType.WAITING_FOR_START, )",
+            "Event(EventType.SHOWDOWN" +
+            ", ranks=["
+            "[<HandRank.STRAIGHT_FLUSH: 8>, 12], "
+            "[<HandRank.NO_HAND: -1>], "
+            "[<HandRank.STRAIGHT_FLUSH: 8>, 12], "
+            "[<HandRank.NO_HAND: -1>], "
+            "[<HandRank.STRAIGHT_FLUSH: 8>, 12], "
+            "[<HandRank.NO_HAND: -1>], "
+            "[<HandRank.NO_HAND: -1>], "
+            "[<HandRank.NO_HAND: -1>], "
+            "[<HandRank.NO_HAND: -1>], "
+            "[<HandRank.NO_HAND: -1>]]" +
+            ", winners=[0, 2, 4]" +
+            ")",
             str(self.recorder.events[0]))
 
         self.recorder.clear()
@@ -195,16 +222,30 @@ class MainStatesTestCase(unittest.TestCase):
         self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
         self.assertEqual(1, len(self.recorder.events))
         self.assertEqual(
-            "Event(EventType.WAITING_FOR_START, )",
+            "Event(EventType.PAYING_OUT" +
+            ", net_profit=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"
+            ", pot_winnings=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"
+            ")",
             str(self.recorder.events[0]))
 
         self.recorder.clear()
         self.manager.proceed()
         self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
         self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(game.EventType.HAND_STARTED,
+                         self.recorder.events[0].event_type)
         self.assertEqual(
-            "Event(EventType.WAITING_FOR_START, )",
-            str(self.recorder.events[0]))
+            "HandPlayer(name0, 0, False), " +
+            "None, " +
+            "HandPlayer(name2, 0, False), " +
+            "None, " +
+            "HandPlayer(name4, 0, False), " +
+            "None, " +
+            "None, " +
+            "None, " +
+            "None, " +
+            "None",
+            ', '.join(str(p) for p in self.recorder.events[0].args["players"]))
 
     def test_paying_out_to_waiting(self):
         self.manager.start_game()

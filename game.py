@@ -64,8 +64,8 @@ class EventType(enum.Enum):
     FLOP_DEALT = 5
     TURN_DEALT = 6
     RIVER_DEALT = 7
-    SHOWDONW = 8
-    PAYOUT = 9
+    SHOWDOWN = 8
+    PAYING_OUT = 9
     
 
 class Event:
@@ -91,13 +91,13 @@ class Event:
       WAITING_TO_START: None
       GAME_STARTED: players (array of HandPlayer)
       HOLE_CARDS_DEALT: cards (array of cards.PlayerCards)
-      FLOP_DEALT: cards (array of cards.PlayerCards)
-      TURN_DEALT: card (cards.PlayerCards)
-      RIVER_DEALT: card (cards.PlayerCards)
-      SHOWDONW: ranks (array of array (as returned by cards.PlayerCards.hand_rank))
+      FLOP_DEALT: cards (cards.PlayerCards)
+      TURN_DEALT: card (deck.Card)
+      RIVER_DEALT: card (deck.Card)
+      SHOWDOWN: ranks (array of array (as returned by cards.PlayerCards.hand_rank))
                 winners (array of int)
-      PAYOUT: pot_winnings (array of int (MAX_PLAYERS size))
-              net_profit (array of int (MAX_PLAYERS size))
+      PAYING_OUT: pot_winnings (array of int (MAX_PLAYERS size))
+                  net_profit (array of int (MAX_PLAYERS size))
 
     """
     def __init__(self, event_type, **kwargs):
@@ -129,16 +129,34 @@ class HandPlayer:
 
 
 class Hand:
-    """Hand controls the state for one deal/pot."""
-    def __init__(self, players, button_pos):
+    """Hand controls the state for one deal/pot.
+
+    Attributes:
+      deck: deck.Deck
+      players: array of None or HandPlayer
+      button_pos: button position
+      board: cards.PlayerCards for the comunity cards
+      ranks: ranks of all hands present at showdown
+      winners: list of winners
+    """
+    def __init__(self, players, button_pos, shuffle):
+        """Creates the hand.
+
+        Args:
+          players: array of Player
+          button_pos: integer button postion
+          shuffle: whether to shuffle the deck. Only False for unittests
+        """
         self.deck = deck.Deck()
-        self.deck.shuffle()
+        if shuffle:
+            self.deck.shuffle()
         self.players = [_none_or_func(HandPlayer, p) for p in players]
         self.button_pos = button_pos
         if self.players[button_pos] is None:
             raise ValueError("No player on button {}".format(button_pos))
-        self.winners = None
         self.board = cards.PlayerCards()
+        self.ranks = None
+        self.winners = None
 
     def deal_hole_cards(self):
         for p in self.players:
@@ -156,14 +174,14 @@ class Hand:
         self.board.cards.extend(self.deck.deal(1))
 
     def showdown(self):
-        ranks = []
+        self.ranks = []
         for p in self.players:
             if p is None or p.hole_cards is None:
-                ranks.append([cards.HandRank.NO_HAND])
+                self.ranks.append([cards.HandRank.NO_HAND])
                 continue
-            ranks.append(p.hole_cards.combine(self.board).hand_rank())
-        best_hand = max(ranks)
-        self.winners = [i for i, rank in enumerate(ranks) if rank == best_hand]
+            self.ranks.append(p.hole_cards.combine(self.board).hand_rank())
+        best_hand = max(self.ranks)
+        self.winners = [i for i, rank in enumerate(self.ranks) if rank == best_hand]
 
         
 @enum.unique
@@ -208,6 +226,8 @@ class Manager:
         self.state= GameState.WAITING_FOR_START
         self.current_hand = None
         self._listeners = []
+        # We only have this functionality for unittests
+        self._shuffle_deck = True
 
     def add_listener(self, listener):
         """Adds an Event listener.
@@ -281,28 +301,58 @@ class Manager:
     def proceed(self):
         if self.state == GameState.WAITING_FOR_START:
             raise WaitingForStartError()
+
         elif self.state == GameState.PRE_DEAL:
             self.current_hand.deal_hole_cards()
             self.state = GameState.HOLE_CARDS_DEALT
+            self._notify(Event(
+                EventType.HOLE_CARDS_DEALT,
+                cards=[_none_or_func(lambda p: p.hole_cards, p)
+                       for p in self.current_hand.players]))
+
         elif self.state == GameState.HOLE_CARDS_DEALT:
             self.current_hand.deal_flop()
             self.state = GameState.FLOP_DEALT
+            self._notify(Event(
+                EventType.FLOP_DEALT,
+                cards=self.current_hand.board))
+
         elif self.state == GameState.FLOP_DEALT:
             self.current_hand.deal_turn()
             self.state = GameState.TURN_DEALT
+            self._notify(Event(
+                EventType.TURN_DEALT,
+                card=self.current_hand.board.cards[-1]))
+
         elif self.state == GameState.TURN_DEALT:
             self.current_hand.deal_river()
             self.state = GameState.RIVER_DEALT
+            self._notify(Event(
+                EventType.RIVER_DEALT,
+                card=self.current_hand.board.cards[-1]))
+
         elif self.state == GameState.RIVER_DEALT:
             self.current_hand.showdown()
             self.state = GameState.SHOWDOWN
+            self._notify(Event(
+                EventType.SHOWDOWN,
+                ranks=self.current_hand.ranks,
+                winners=self.current_hand.winners))
+
         elif self.state == GameState.SHOWDOWN:
             self.state = GameState.PAYING_OUT
+            # TODO: we obviously aren't dealing with any pot now
+            self._notify(Event(
+                EventType.PAYING_OUT,
+                net_profit=[0] * MAX_PLAYERS,
+                pot_winnings=[0] * MAX_PLAYERS))
+            
         elif self.state == GameState.PAYING_OUT:
-            # TODO: destroy the Hand, deal with the payout,
-            # (maybe) create new Hand
+            self.current_hand = None
             if self.num_players() > 1:
+                event = self._create_hand()
                 self.state = GameState.PRE_DEAL
+                self._notify(event)
             else:
                 self.state = GameState.WAITING_FOR_START
                 self._notify(Event(EventType.WAITING_FOR_START))
@@ -330,7 +380,7 @@ class Manager:
     def _create_hand(self):
         if self.current_hand is not None:
             raise ValueError("Can not create hand while one in progress")
-        self.current_hand = Hand(self.players, self.button_pos)
+        self.current_hand = Hand(self.players, self.button_pos, self._shuffle_deck)
         return Event(EventType.HAND_STARTED, players=self.current_hand.players)
 
         
