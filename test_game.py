@@ -114,6 +114,9 @@ class MainStatesTestCase(unittest.TestCase):
             self.manager.add_player(game.Player("name{}".format(idx), 0))
         for idx in [1, 3]:
             self.manager.remove_player(idx)
+        # Add the recorder last because we don't care about the add/remove events.
+        self.recorder = game.RecordingListener()
+        self.manager.add_listener(self.recorder)
 
     def test_start_game(self):
         self.manager.start_game()
@@ -125,33 +128,83 @@ class MainStatesTestCase(unittest.TestCase):
     def test_multiple_proceed(self):
         self.manager.start_game()
         self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(game.EventType.HAND_STARTED,
+                         self.recorder.events[0].event_type)
+        self.assertEqual(
+            "HandPlayer(name0, 0, False), " +
+            "None, " +
+            "HandPlayer(name2, 0, False), " +
+            "None, " +
+            "HandPlayer(name4, 0, False), " +
+            "None, " +
+            "None, " +
+            "None, " +
+            "None, " +
+            "None",
+            ', '.join(str(p) for p in self.recorder.events[0].args["players"]))
 
+        self.recorder.clear()
         self.manager.proceed()
         self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
         for idx in [0, 2, 4]:
             self.assertEqual(2, len(self.manager.current_hand.players[idx].hole_cards.cards))
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.WAITING_FOR_START, )",
+            str(self.recorder.events[0]))
 
+        self.recorder.clear()
         self.manager.proceed()
         self.assertEqual(game.GameState.FLOP_DEALT, self.manager.state)
         self.assertEqual(3, len(self.manager.current_hand.board.cards))
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.WAITING_FOR_START, )",
+            str(self.recorder.events[0]))
 
+        self.recorder.clear()
         self.manager.proceed()
         self.assertEqual(game.GameState.TURN_DEALT, self.manager.state)
         self.assertEqual(4, len(self.manager.current_hand.board.cards))
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.WAITING_FOR_START, )",
+            str(self.recorder.events[0]))
 
+        self.recorder.clear()
         self.manager.proceed()
         self.assertEqual(game.GameState.RIVER_DEALT, self.manager.state)
         self.assertEqual(5, len(self.manager.current_hand.board.cards))
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.WAITING_FOR_START, )",
+            str(self.recorder.events[0]))
 
+        self.recorder.clear()
         self.manager.proceed()
         self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
         self.assertGreater(len(self.manager.current_hand.winners), 0)
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.WAITING_FOR_START, )",
+            str(self.recorder.events[0]))
 
+        self.recorder.clear()
         self.manager.proceed()
         self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.WAITING_FOR_START, )",
+            str(self.recorder.events[0]))
 
+        self.recorder.clear()
         self.manager.proceed()
         self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.WAITING_FOR_START, )",
+            str(self.recorder.events[0]))
 
     def test_paying_out_to_waiting(self):
         self.manager.start_game()
@@ -162,8 +215,13 @@ class MainStatesTestCase(unittest.TestCase):
         self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
         for idx in [2, 4]:
             self.manager.remove_player(idx)
+        self.recorder.clear()
         self.manager.proceed()
         self.assertEqual(game.GameState.WAITING_FOR_START, self.manager.state)
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.WAITING_FOR_START, )",
+            str(self.recorder.events[0]))
 
     def test_proceed_from_waiting(self):
         with self.assertRaises(game.WaitingForStartError):

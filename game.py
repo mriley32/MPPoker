@@ -31,10 +31,18 @@ class WaitingForStartError(NotReadyError):
     pass
 
 
+def _none_or_func(f, x):
+    """Return None if x is None, f(x) otherwise"""
+    if x is None:
+        return None
+    return f(x)
+
+
 class Player:
     """Player represents the state of of the player.
 
-    Note that this does not cover the state inside of a deal."""
+    Note that this does not cover the state inside of a hand.
+    See HandPlayer for that."""
 
     def __init__(self, name, stack):
         self.name = name
@@ -50,7 +58,15 @@ class Player:
 class EventType(enum.Enum):
     PLAYER_ADDED = 0
     PLAYER_REMOVED = 1
-
+    WAITING_FOR_START = 2
+    HAND_STARTED = 3
+    HOLE_CARDS_DEALT = 4
+    FLOP_DEALT = 5
+    TURN_DEALT = 6
+    RIVER_DEALT = 7
+    SHOWDONW = 8
+    PAYOUT = 9
+    
 
 class Event:
     """Events are for communicating out what has happened in the game.
@@ -60,6 +76,10 @@ class Event:
     objects can subscribe as listeners in a Manager and be passed
     Event objects telling them when things happen in the game.
 
+    If the listener is going to keep a reference to the data passed in
+    the Event, they should make a copy because the underlying objects may be
+    updated.
+
     Attributes:
       event_type: the type of event (one of the enum EventType)
       args: a dictionary with the arguments for this event. The expected contents
@@ -68,6 +88,17 @@ class Event:
     Expected arguments by type:
       PLAYER_ADDED: player(of type Player)
       PLAYER_REMOVED: player(of type Player)
+      WAITING_TO_START: None
+      GAME_STARTED: players (array of HandPlayer)
+      HOLE_CARDS_DEALT: cards (array of cards.PlayerCards)
+      FLOP_DEALT: cards (array of cards.PlayerCards)
+      TURN_DEALT: card (cards.PlayerCards)
+      RIVER_DEALT: card (cards.PlayerCards)
+      SHOWDONW: ranks (array of array (as returned by cards.PlayerCards.hand_rank))
+                winners (array of int)
+      PAYOUT: pot_winnings (array of int (MAX_PLAYERS size))
+              net_profit (array of int (MAX_PLAYERS size))
+
     """
     def __init__(self, event_type, **kwargs):
         self.event_type = event_type
@@ -92,18 +123,17 @@ class HandPlayer:
         self.initial_stack = player.stack
         self.hole_cards = None
 
+    def __str__(self):
+        return "HandPlayer({}, {}, {})".format(
+            self.base_player.name, self.initial_stack, self.hole_cards is not None)
+
 
 class Hand:
     """Hand controls the state for one deal/pot."""
     def __init__(self, players, button_pos):
         self.deck = deck.Deck()
         self.deck.shuffle()
-        self.players = []
-        for p in players:
-            if p is None:
-                self.players.append(None)
-            else:
-                self.players.append(HandPlayer(p))
+        self.players = [_none_or_func(HandPlayer, p) for p in players]
         self.button_pos = button_pos
         if self.players[button_pos] is None:
             raise ValueError("No player on button {}".format(button_pos))
@@ -244,8 +274,9 @@ class Manager:
         if self.num_players() <= 1:
             raise NotEnoughPlayersError()
         self._advance_button()
-        self._create_hand()
+        event = self._create_hand()
         self.state = GameState.PRE_DEAL
+        self._notify(event)
 
     def proceed(self):
         if self.state == GameState.WAITING_FOR_START:
@@ -274,6 +305,7 @@ class Manager:
                 self.state = GameState.PRE_DEAL
             else:
                 self.state = GameState.WAITING_FOR_START
+                self._notify(Event(EventType.WAITING_FOR_START))
         else:
             raise ValueError("Unknown state {}".format(self.state))
 
@@ -299,7 +331,9 @@ class Manager:
         if self.current_hand is not None:
             raise ValueError("Can not create hand while one in progress")
         self.current_hand = Hand(self.players, self.button_pos)
+        return Event(EventType.HAND_STARTED, players=self.current_hand.players)
 
+        
     def _notify(self, event):
         for listener in self._listeners:
             listener.notify(event)
