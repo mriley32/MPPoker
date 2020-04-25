@@ -27,7 +27,7 @@ class HandRank(Enum):
 
     def __lt__(self, other):
         return self.value < other.value
-    
+
 
 class PlayerCards:
     """Class representing a hand of cards
@@ -35,7 +35,7 @@ class PlayerCards:
     Attributes:
        cards: a list of deck.Card
     """
-    
+
     def __init__(self, cards=[]):
         # Make a copy to avoid any aliasing problems with the caller
         self.cards = cards.copy()
@@ -49,16 +49,41 @@ class PlayerCards:
     def combine(self, other):
         """Returns a new hand with a combination of the cards in both."""
         return PlayerCards(self.cards + other.cards)
-    
+
+    def _get_straight_high_rank(self):
+        """Return the rank of the highest straight in the hand.
+
+        Returns:
+          integer rank
+        """
+        rank_counts = [0] * 15
+        for c in self.cards:
+            rank_counts[c.rank()] += 1
+            # Since the ace can be rank 1 also, but it there.
+            if c.rank() == 14:
+                rank_counts[1] += 1
+
+        straight_high_rank = None
+        num_straight_cards = 0
+        for rank, count in enumerate(rank_counts):
+            if count >= 1:
+                num_straight_cards += 1
+                if num_straight_cards >= 5:
+                    straight_high_rank = rank
+            elif count == 0:
+                num_straight_cards = 0
+
+        return straight_high_rank
+
     def hand_rank(self):
         """Return the best poker hand that can be made from these cards.
 
         Returns:
           list where first element is HandRank and other elements are what is
-          needed to rank this hard. For example, if the hand is 
+          needed to rank this hard. For example, if the hand is
           2s 2h 9s 9h Td, the list returned is
           [TWO_PAIR, 9, 2, 10]
-       
+
         Raises:
           ValueError: if the hand has less than 5 cards
         """
@@ -69,36 +94,18 @@ class PlayerCards:
         if len(self.cards) > 5:
             return max(PlayerCards(list(cards)).hand_rank()
                        for cards in itertools.combinations(self.cards, 5))
-        
-        # To make finding the low straights easier, we'll keep two
-        # versions of our rank counts, one with the low ace included
-        # and one without.
+
         rank_counts = [0] * 15
-        rank_counts_low_ace = [0] * 15
         for c in self.cards:
             rank_counts[c.rank()] += 1
-            rank_counts_low_ace[c.rank()] += 1
-            if c.rank() == 14:
-                rank_counts_low_ace[1] += 1
 
-        # We'll need this for straight and for straight flush, so
-        # we'll calculate it here.
-        straight_high_rank = None
-        num_straight_cards = 0
-        for rank, count in enumerate(rank_counts_low_ace):
-            if count == 1:
-                num_straight_cards += 1
-                if num_straight_cards >= 5:
-                    straight_high_rank = rank
-            elif count == 0:
-                num_straight_cards = 0
+        straight_high_rank = self._get_straight_high_rank()
 
         # The list of single cards is needed to fill out the ranking
         # array for several hands so we'll just do it here.
         sorted_singles = list(reversed([
                 r for r, count in enumerate(rank_counts) if count == 1]))
-        
-                
+
         suit_counts = [0] * 4
         for c in self.cards:
             suit_counts[c.suit().value] += 1
@@ -110,7 +117,7 @@ class PlayerCards:
                 return [HandRank.STRAIGHT_FLUSH, straight_high_rank]
         except ValueError:
             pass
-            
+
         # four of a kind
         try:
             four_of_a_kind_rank = rank_counts.index(4)
@@ -161,4 +168,3 @@ class PlayerCards:
             pass
 
         return [HandRank.HIGH_CARD] + sorted_singles
-
