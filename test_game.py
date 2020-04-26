@@ -6,7 +6,7 @@ import game
 
 class AddRemoveTestCase(unittest.TestCase):
     def setUp(self):
-        self.manager = game.Manager()
+        self.manager = game.Manager(game.Configuration())
         self.recorder = game.RecordingListener()
         self.manager.add_listener(self.recorder)
     
@@ -23,7 +23,7 @@ class AddRemoveTestCase(unittest.TestCase):
             str(self.recorder.events[0]))
 
     def test_add_player_too_many(self):
-        for idx in range(game.MAX_PLAYERS):
+        for idx in range(self.manager.config.max_players):
             player = game.Player("name{}".format(idx), 1000 * idx)
             self.assertEqual(idx, self.manager.add_player(player))
         with self.assertRaises(game.GameFullError):
@@ -57,9 +57,9 @@ class AddRemoveTestCase(unittest.TestCase):
 
 class AdvanceButtonTestCase(unittest.TestCase):
     def setUp(self):
-        self.manager = game.Manager()
+        self.manager = game.Manager(game.Configuration())
         # We'll create players in postiions 0, 2, 3, and 7
-        for idx in range(game.MAX_PLAYERS):
+        for idx in range(self.manager.config.max_players):
             self.manager.add_player(game.Player("name{}".format(idx), 0))
         for idx in [1, 4, 5, 6, 8, 9]:
             self.manager.remove_player(idx)
@@ -108,7 +108,7 @@ class AdvanceButtonTestCase(unittest.TestCase):
         
 class MainStatesTestCase(unittest.TestCase):
     def setUp(self):
-        self.manager = game.Manager()
+        self.manager = game.Manager(game.Configuration())
         self.manager._shuffle_deck = False
         # We'll create players in postiions 0, 2, 4
         for idx in range(5):
@@ -271,7 +271,7 @@ class MainStatesTestCase(unittest.TestCase):
 
 class ShowdownTestCase(unittest.TestCase):
     def setUp(self):
-        self.manager = game.Manager()
+        self.manager = game.Manager(game.Configuration())
         # We'll create players in postiions 0, 2, 4
         for idx in range(5):
             self.manager.add_player(game.Player("name{}".format(idx), 0))

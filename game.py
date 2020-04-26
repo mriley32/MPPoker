@@ -6,8 +6,6 @@ import random
 import cards
 import deck
 
-MAX_PLAYERS = 10
-
 class GameFullError(Exception):
     pass
 
@@ -38,11 +36,22 @@ def _none_or_func(f, x):
     return f(x)
 
 
+class Configuration:
+    """Data class for configuration of the game.
+
+    Attributes:
+      max_players: number of spots in the game
+    """
+    def __init__(self, max_players=10):
+        self.max_players = max_players
+    
+    
 class Player:
     """Player represents the state of of the player.
 
     Note that this does not cover the state inside of a hand.
-    See HandPlayer for that."""
+    See HandPlayer for that.
+    """
 
     def __init__(self, name, stack):
         self.name = name
@@ -96,8 +105,8 @@ class Event:
       RIVER_DEALT: card (deck.Card)
       SHOWDOWN: ranks (array of array (as returned by cards.PlayerCards.hand_rank))
                 winners (array of int)
-      PAYING_OUT: pot_winnings (array of int (MAX_PLAYERS size))
-                  net_profit (array of int (MAX_PLAYERS size))
+      PAYING_OUT: pot_winnings (array of int (config.max_players size))
+                  net_profit (array of int (config.max_players size))
 
     """
     def __init__(self, event_type, **kwargs):
@@ -220,8 +229,14 @@ class Manager:
         on proceed()
     """
 
-    def __init__(self):
-        self.players = [None] * MAX_PLAYERS
+    def __init__(self, config):
+        """Initializes Manager.
+
+        Args:
+          config: Configuration
+        """
+        self.config = config
+        self.players = [None] * self.config.max_players
         self.button_pos = None
         self.state= GameState.WAITING_FOR_START
         self.current_hand = None
@@ -251,7 +266,7 @@ class Manager:
         Raises:
           GameFullError: if no spots remain
         """
-        for idx in range(MAX_PLAYERS):
+        for idx in range(self.config.max_players):
             if self.players[idx]:
                 continue
             player.position = idx
@@ -344,8 +359,8 @@ class Manager:
             # TODO: we obviously aren't dealing with any pot now
             self._notify(Event(
                 EventType.PAYING_OUT,
-                net_profit=[0] * MAX_PLAYERS,
-                pot_winnings=[0] * MAX_PLAYERS))
+                net_profit=[0] * self.config.max_players,
+                pot_winnings=[0] * self.config.max_players))
             
         elif self.state == GameState.PAYING_OUT:
             self.current_hand = None
@@ -367,8 +382,8 @@ class Manager:
                 [i for i, p in enumerate(self.players) if p is not None])
         else:
             chosen_button = None
-            for offset in range(1, MAX_PLAYERS + 1):
-                try_pos = (self.button_pos + offset) % MAX_PLAYERS
+            for offset in range(1, self.config.max_players + 1):
+                try_pos = (self.button_pos + offset) % self.config.max_players
                 if self.players[try_pos] is not None:
                     chosen_button = try_pos
                     break
