@@ -42,8 +42,9 @@ class Configuration:
     Attributes:
       max_players: number of spots in the game
     """
-    def __init__(self, max_players=10):
+    def __init__(self, max_players=10, ante=0):
         self.max_players = max_players
+        self.ante = ante
     
     
 class Player:
@@ -69,12 +70,13 @@ class EventType(enum.Enum):
     PLAYER_REMOVED = 1
     WAITING_FOR_START = 2
     HAND_STARTED = 3
-    HOLE_CARDS_DEALT = 4
-    FLOP_DEALT = 5
-    TURN_DEALT = 6
-    RIVER_DEALT = 7
-    SHOWDOWN = 8
-    PAYING_OUT = 9
+    ANTE = 4
+    HOLE_CARDS_DEALT = 5
+    FLOP_DEALT = 6
+    TURN_DEALT = 7
+    RIVER_DEALT = 8
+    SHOWDOWN = 9
+    PAYING_OUT = 10
     
 
 class Event:
@@ -120,16 +122,22 @@ class Event:
         return "Event({}, {})".format(self.event_type, ", ".join(args_strs))
 
 
+def _shuffled_deck_factory():
+    d = deck.Deck()
+    d.shuffle
+    return d
+
 class HandPlayer:
     """Controls the state of a player for one deal/pot."""
     def __init__(self, player):
-        """Initialize HandPLayer
+        """Initialize HandPlayer
 
         Args:
           player: Player
         """
         self.base_player = player
         self.initial_stack = player.stack
+        self.stack = player.stack
         self.hole_cards = None
 
     def __str__(self):
@@ -138,35 +146,53 @@ class HandPlayer:
 
 
 class Hand:
-    """Hand controls the state for one deal/pot.
+    """Hand controls the state for one hand/deal.
 
     Attributes:
+      config: Configuration
       deck: deck.Deck
       players: array of None or HandPlayer
       button_pos: button position
+      pot: amount in the pot
       board: cards.PlayerCards for the comunity cards
       ranks: ranks of all hands present at showdown
       winners: list of winners
     """
-    def __init__(self, players, button_pos, shuffle):
+    def __init__(self, config, players, button_pos, deck_factory):
         """Creates the hand.
 
         Args:
+          config: Configuration
           players: array of Player
           button_pos: integer button postion
-          shuffle: whether to shuffle the deck. Only False for unittests
+          deck_factory: function which returns a deck.Deck (for injection during 
+            unittests, normally it's shuffled_deck_factory)
         """
-        self.deck = deck.Deck()
-        if shuffle:
-            self.deck.shuffle()
+        self.config = config
+        self.deck = deck_factory()
         self.players = [_none_or_func(HandPlayer, p) for p in players]
         self.button_pos = button_pos
         if self.players[button_pos] is None:
             raise ValueError("No player on button {}".format(button_pos))
+        self.pot = 0
         self.board = cards.PlayerCards()
         self.ranks = None
         self.winners = None
+        self.net_winnings = None
 
+    def ante(self):
+        if self.config.ante == 0:
+            return None
+        num_players = sum(1 for p in self.players if p is not None)
+        self.pot += num_players * self.config.ante
+        players_who_anted = []
+        for pos, player in enumerate(self.players):
+            if player is None:
+                continue
+            player.stack -= self.config.ante
+            players_who_anted.append(pos)
+        return players_who_anted
+        
     def deal_hole_cards(self):
         for p in self.players:
             if p is None:
@@ -191,6 +217,8 @@ class Hand:
             self.ranks.append(p.hole_cards.combine(self.board).hand_rank())
         best_hand = max(self.ranks)
         self.winners = [i for i, rank in enumerate(self.ranks) if rank == best_hand]
+        for idx in self.winners:
+            self.players[idx].stack += self.pot / len(self.winners)
 
         
 @enum.unique
@@ -214,7 +242,7 @@ class Manager:
     various functions. The listeners may want to access the state of the Manager
     in response to a notificaiton, so the Manager needs to be in a clean state.
 
-    The manager has a core concept of a current state. THe state
+    The manager has a core concept of a current state. The state
     proceeds under various actions / conditions as below. The main way
     to continue the game is to call proceed(). If the game can
     proceed, an exception derived from NotReadyError will be raised.
@@ -241,8 +269,8 @@ class Manager:
         self.state= GameState.WAITING_FOR_START
         self.current_hand = None
         self._listeners = []
-        # We only have this functionality for unittests
-        self._shuffle_deck = True
+        # Can be overridden for unittests
+        self._deck_factory = _shuffled_deck_factory
 
     def add_listener(self, listener):
         """Adds an Event listener.
@@ -309,9 +337,10 @@ class Manager:
         if self.num_players() <= 1:
             raise NotEnoughPlayersError()
         self._advance_button()
-        event = self._create_hand()
+        events = self._create_hand()
         self.state = GameState.PRE_DEAL
-        self._notify(event)
+        for e in events:
+            self._notify(e)
 
     def proceed(self):
         if self.state == GameState.WAITING_FOR_START:
@@ -365,9 +394,10 @@ class Manager:
         elif self.state == GameState.PAYING_OUT:
             self.current_hand = None
             if self.num_players() > 1:
-                event = self._create_hand()
+                events = self._create_hand()
                 self.state = GameState.PRE_DEAL
-                self._notify(event)
+                for e in events:
+                    self._notify(e)
             else:
                 self.state = GameState.WAITING_FOR_START
                 self._notify(Event(EventType.WAITING_FOR_START))
@@ -393,10 +423,16 @@ class Manager:
             self.button_pos = chosen_button
 
     def _create_hand(self):
+        events = []
         if self.current_hand is not None:
             raise ValueError("Can not create hand while one in progress")
-        self.current_hand = Hand(self.players, self.button_pos, self._shuffle_deck)
-        return Event(EventType.HAND_STARTED, players=self.current_hand.players)
+        self.current_hand = Hand(
+            self.config, self.players, self.button_pos, self._deck_factory)
+        events.append(Event(EventType.HAND_STARTED, players=self.current_hand.players))
+        players_who_anted = self.current_hand.ante()
+        if players_who_anted:
+            events.append(Event(EventType.ANTE, player_indices=players_who_anted))
+        return events
 
         
     def _notify(self, event):

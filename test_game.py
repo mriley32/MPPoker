@@ -1,6 +1,7 @@
 import unittest
 
 import cards
+import deck
 import game
 
 
@@ -104,12 +105,16 @@ class AdvanceButtonTestCase(unittest.TestCase):
         with self.assertRaises(game.NotEnoughPlayersError):
             self.manager._advance_button()
         self.assertIsNone(self.manager.button_pos)
+
+
+def in_order_deck_factory():
+    return deck.Deck()
         
         
 class MainStatesTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = game.Manager(game.Configuration())
-        self.manager._shuffle_deck = False
+        self.manager._deck_factory = in_order_deck_factory
         # We'll create players in postiions 0, 2, 4
         for idx in range(5):
             self.manager.add_player(game.Player("name{}".format(idx), 0))
@@ -267,6 +272,28 @@ class MainStatesTestCase(unittest.TestCase):
     def test_proceed_from_waiting(self):
         with self.assertRaises(game.WaitingForStartError):
             self.manager.proceed()
+
+            
+class AnteTestCase(unittest.TestCase):
+    def setUp(self):
+        self.manager = game.Manager(game.Configuration(ante=100))
+        self.manager._deck_factory = in_order_deck_factory
+        # We'll create players in postiions 0, 1, 4
+        for idx in range(2):
+            self.manager.add_player(game.Player("name{}".format(idx), 500))
+        # Add the recorder last because we don't care about the add events.
+        self.recorder = game.RecordingListener()
+        self.manager.add_listener(self.recorder)
+
+    def test_ante_events(self):
+        self.manager.start_game()
+        self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+        self.assertEqual(2, len(self.recorder.events))
+        self.assertEqual(game.EventType.HAND_STARTED,
+                         self.recorder.events[0].event_type)
+        self.assertEqual(game.EventType.ANTE,
+                         self.recorder.events[1].event_type)
+        self.assertEqual([0, 1], self.recorder.events[1].args["player_indices"])
 
 
 class ShowdownTestCase(unittest.TestCase):

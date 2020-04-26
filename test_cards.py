@@ -82,7 +82,7 @@ class CardsTestCase(unittest.TestCase):
                          cards.PlayerCards.from_str("3s 3c 5c 6h 7s").hand_rank())
 
         self.assertEqual([cards.HandRank.HIGH_CARD, 10, 8, 6, 4, 2],
-                         cards.PlayerCards.from_str("2s 4c 6d, 8s Ts").hand_rank())
+                         cards.PlayerCards.from_str("2s 4c 6d 8s Ts").hand_rank())
 
 
     def test_hand_rank_7_card(self):

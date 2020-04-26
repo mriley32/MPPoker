@@ -15,6 +15,8 @@ class Card:
     _RANK_STR = ["", "", "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"]
 
     def from_str(s):
+        if len(s) != 2:
+            raise ValueError("Bad card string: {}".format(s))
         return Card(
             Card._SUIT_STR.index(s[1]) * 13 +
             Card._RANK_STR.index(s[0]) - 2)
@@ -38,10 +40,29 @@ class Card:
 
 class Deck:
 
-    def __init__(self):
-        self.our_deck = [Card(x) for x in range(52)]
+    def __init__(self, order=range(52)):
+        if len(order) != 52:
+            raise ValueError("Incorrect number of cards in order: {}".format(order))
+        if len(set(order)) != 52:
+            raise ValueError("Non unique cards in order: {}".format(order))
+        self.our_deck = [Card(x) for x in order]
         self.next_card_idx = 0
 
+    def from_initial_cards_str(top_cards_str):
+        """Create a deck with the top cards given.
+
+        Args:
+          top_cards_str: Space sepaated string of two character card string
+
+        Returns
+          Deck
+        """
+        order = [Card.from_str(s).card_idx for s in top_cards_str.split(" ")]
+        for i in range(52):
+            if i not in order:
+                order.append(i)
+        return Deck(order=order)
+        
     def shuffle(self):
         random.shuffle(self.our_deck)
         self.next_card_idx = 0

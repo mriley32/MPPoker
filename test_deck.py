@@ -28,6 +28,13 @@ class CardTestCase(unittest.TestCase):
             new_card = deck.Card.from_str(str(c))
             self.assertEqual(idx, new_card.card_idx)
 
+    def test_from_str_invalid(self):
+        with self.assertRaises(ValueError):
+            deck.Card.from_str("foobar")
+        with self.assertRaises(ValueError):
+            deck.Card.from_str("2")
+        with self.assertRaises(ValueError):
+            deck.Card.from_str("")
 
 
 class DeckTestCase(unittest.TestCase):
@@ -62,7 +69,29 @@ class DeckTestCase(unittest.TestCase):
         c1 = d.deal_one()
         c2 = d.deal_one()
         self.assertNotEqual(c1, c2)
-            
 
+    def test_invalid_order(self):
+        with self.assertRaises(ValueError):
+            deck.Deck(order=[1] * 52)
+        with self.assertRaises(ValueError):
+            deck.Deck(order=[1, 2])
+
+    def test_order(self):
+        order = list(range(52))
+        order.remove(50)
+        order.insert(0, 50)
+        d = deck.Deck(order=order)
+        self.assertEqual(deck.Card(50), d.our_deck[0])
+        self.assertEqual(deck.Card(0), d.our_deck[1])
+        self.assertEqual(deck.Card(49), d.our_deck[50])
+        self.assertEqual(deck.Card(51), d.our_deck[51])
+
+    def test_from_intial_cards_str(self):
+        d = deck.Deck.from_initial_cards_str("Ac As Ad")
+        self.assertEqual(deck.Card.from_str("Ac"), d.our_deck[0])
+        self.assertEqual(deck.Card.from_str("As"), d.our_deck[1])
+        self.assertEqual(deck.Card.from_str("Ad"), d.our_deck[2])
+        
+        
 if __name__ == '__main__':
     unittest.main()
