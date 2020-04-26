@@ -140,11 +140,11 @@ class MainStatesTestCase(unittest.TestCase):
         self.assertEqual(game.EventType.HAND_STARTED,
                          self.recorder.events[0].event_type)
         self.assertEqual(
-            "HandPlayer(name0, 0, False), " +
+            "HandPlayer(name0, 0, 0, False), " +
             "None, " +
-            "HandPlayer(name2, 0, False), " +
+            "HandPlayer(name2, 0, 0, False), " +
             "None, " +
-            "HandPlayer(name4, 0, False), " +
+            "HandPlayer(name4, 0, 0, False), " +
             "None, " +
             "None, " +
             "None, " +
@@ -240,11 +240,11 @@ class MainStatesTestCase(unittest.TestCase):
         self.assertEqual(game.EventType.HAND_STARTED,
                          self.recorder.events[0].event_type)
         self.assertEqual(
-            "HandPlayer(name0, 0, False), " +
+            "HandPlayer(name0, 0, 0, False), " +
             "None, " +
-            "HandPlayer(name2, 0, False), " +
+            "HandPlayer(name2, 0, 0, False), " +
             "None, " +
-            "HandPlayer(name4, 0, False), " +
+            "HandPlayer(name4, 0, 0, False), " +
             "None, " +
             "None, " +
             "None, " +
@@ -277,8 +277,7 @@ class MainStatesTestCase(unittest.TestCase):
 class AnteTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = game.Manager(game.Configuration(ante=100))
-        self.manager._deck_factory = in_order_deck_factory
-        # We'll create players in postiions 0, 1, 4
+        # We'll create players in postiions 0, 1
         for idx in range(2):
             self.manager.add_player(game.Player("name{}".format(idx), 500))
         # Add the recorder last because we don't care about the add events.
@@ -296,63 +295,63 @@ class AnteTestCase(unittest.TestCase):
         self.assertEqual([0, 1], self.recorder.events[1].args["player_indices"])
 
 
+def deck_factory_from_cards(player_cards, board):
+    return lambda: deck.Deck.from_initial_cards_str(
+        " ".join(player_cards) + " " + board)
+            
 class ShowdownTestCase(unittest.TestCase):
     def setUp(self):
-        self.manager = game.Manager(game.Configuration())
+        self.manager = game.Manager(game.Configuration(ante=100))
         # We'll create players in postiions 0, 2, 4
         for idx in range(5):
-            self.manager.add_player(game.Player("name{}".format(idx), 0))
+            self.manager.add_player(game.Player("name{}".format(idx), 1000))
         for idx in [1, 3]:
             self.manager.remove_player(idx)
-        # Advance the game to just before showdown. The test cases
-        # will mess with the cards tehmselves.
+
+    def advance_to_showdown(self, player_cards, board):
+        self.manager._deck_factory = deck_factory_from_cards(player_cards, board)
+
         self.manager.start_game()
         # Kind of a dumb test because it's relying on the number of
-        # stages to get to RIVER_DEALT, but we'll deal with it later.
-        for _ in range(4):
+        # stages to get to SHOWDOWN, but we'll deal with it later.
+        for _ in range(5):
             self.manager.proceed()
-        self.assertEqual(game.GameState.RIVER_DEALT, self.manager.state)
+        self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
 
     def test_single_winner(self):
-        self.manager.current_hand.board = (
-            cards.PlayerCards.from_str("Ac Kd Qh Jd 5c"))
-        self.manager.current_hand.players[0].hole_cards = (
-            cards.PlayerCards.from_str("Ks 2c"))
-        self.manager.current_hand.players[2].hole_cards = (
-            cards.PlayerCards.from_str("As 3c"))
-        self.manager.current_hand.players[4].hole_cards = (
-            cards.PlayerCards.from_str("Js 4c"))
-        self.assertIsNone(self.manager.current_hand.winners)
-        self.manager.proceed()
-        self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
+        self.advance_to_showdown(["Ks 2c", "As 3c", "Js 4c"],
+                                 "Ac Kd Qh Jd 5c")
         self.assertEqual([2], self.manager.current_hand.winners)
+        self.assertEqual(900, self.manager.current_hand.players[0].stack)
+        self.assertEqual(1200, self.manager.current_hand.players[2].stack)
+        self.assertEqual(900, self.manager.current_hand.players[4].stack)
         
     def test_two_winner(self):
-        self.manager.current_hand.board = (
-            cards.PlayerCards.from_str("Ac Kc 2h 3h 4h"))
-        self.manager.current_hand.players[0].hole_cards = (
-            cards.PlayerCards.from_str("As Ks"))
-        self.manager.current_hand.players[2].hole_cards = (
-            cards.PlayerCards.from_str("Ad Kd"))
-        self.manager.current_hand.players[4].hole_cards = (
-            cards.PlayerCards.from_str("Jd Td"))
-        self.assertIsNone(self.manager.current_hand.winners)
-        self.manager.proceed()
-        self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
+        self.advance_to_showdown(["As Ks", "Ad Kd", "Jd Td"],
+                                 "Ac Kc 2h 3h 4h")
         self.assertEqual([0, 2], self.manager.current_hand.winners)
+        self.assertEqual(1050, self.manager.current_hand.players[0].stack)
+        self.assertEqual(1050, self.manager.current_hand.players[2].stack)
+        self.assertEqual(900, self.manager.current_hand.players[4].stack)
 
     def test_play_the_board_missing_player(self):
-        self.manager.current_hand.board = (
-            cards.PlayerCards.from_str("Ac Kd Qh Jd Tc"))
-        self.manager.current_hand.players[0].hole_cards = (
-            cards.PlayerCards.from_str("Ks 2c"))
+        # This test is a little weird because it's testing something
+        # that can't actually happen right now because we have no
+        # opporunity for anyone to fold.
+        self.manager._deck_factory = deck_factory_from_cards(
+            ["Ks 2c", "8d 9d", "Js 4c"],
+            "Ac Kd Qh Jd Tc")
+
+        self.manager.start_game()
+        for _ in range(4):
+            self.manager.proceed()
         self.manager.current_hand.players[2].hole_cards = None
-        self.manager.current_hand.players[4].hole_cards = (
-            cards.PlayerCards.from_str("Js 4c"))
-        self.assertIsNone(self.manager.current_hand.winners)
         self.manager.proceed()
         self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
         self.assertEqual([0, 4], self.manager.current_hand.winners)
+        self.assertEqual(1050, self.manager.current_hand.players[0].stack)
+        self.assertEqual(900, self.manager.current_hand.players[2].stack)
+        self.assertEqual(1050, self.manager.current_hand.players[4].stack)
         
 
     

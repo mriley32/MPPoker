@@ -141,8 +141,9 @@ class HandPlayer:
         self.hole_cards = None
 
     def __str__(self):
-        return "HandPlayer({}, {}, {})".format(
-            self.base_player.name, self.initial_stack, self.hole_cards is not None)
+        return "HandPlayer({}, {}, {}, {})".format(
+            self.base_player.name, self.initial_stack, self.stack,
+            self.hole_cards is not None)
 
 
 class Hand:

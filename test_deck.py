@@ -63,7 +63,8 @@ class DeckTestCase(unittest.TestCase):
             d.deal_one()
 
     def test_shuffle(self):
-        # It's annoying hard to test a shuffle. We'll just make sure it runs and the first two cards are different.
+        # It's annoying hard to test a shuffle. We'll just make sure
+        # it runs and the first two cards are different.
         d = deck.Deck()
         d.shuffle()
         c1 = d.deal_one()
