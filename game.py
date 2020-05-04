@@ -66,18 +66,32 @@ class Player:
 
 @enum.unique
 class EventType(enum.Enum):
+    # Expected args: player(of type Player)
     PLAYER_ADDED = 0
+    # Expected args: player(of type Player)
     PLAYER_REMOVED = 1
+    # Expected args: None
     WAITING_FOR_START = 2
+    # Expected args: players (array of HandPlayer) 
     HAND_STARTED = 3
+    # Expected args: player_indices (array of int)
     ANTE = 4
+    # Expected args: cards (array of cards.PlayerCards)
     HOLE_CARDS_DEALT = 5
+    # Expected args: cards (cards.PlayerCards)
     FLOP_DEALT = 6
+    # Expected args: card (deck.Card)
     TURN_DEALT = 7
+    # Expected args: card (deck.Card)
     RIVER_DEALT = 8
+    # Expected args:
+    #     ranks (array of array (as returned by cards.PlayerCards.hand_rank))
+    #     winners (array of int)
     SHOWDOWN = 9
+    # Expected args:
+    #     pot_winnings (array of int (config.max_players size))
+    #     net_profit (array of int (config.max_players size))
     PAYING_OUT = 10
-    
 
 class Event:
     """Events are for communicating out what has happened in the game.
@@ -94,21 +108,9 @@ class Event:
     Attributes:
       event_type: the type of event (one of the enum EventType)
       args: a dictionary with the arguments for this event. The expected contents
-            are documented below
+            are documented in EventType above.
 
     Expected arguments by type:
-      PLAYER_ADDED: player(of type Player)
-      PLAYER_REMOVED: player(of type Player)
-      WAITING_TO_START: None
-      GAME_STARTED: players (array of HandPlayer)
-      HOLE_CARDS_DEALT: cards (array of cards.PlayerCards)
-      FLOP_DEALT: cards (cards.PlayerCards)
-      TURN_DEALT: card (deck.Card)
-      RIVER_DEALT: card (deck.Card)
-      SHOWDOWN: ranks (array of array (as returned by cards.PlayerCards.hand_rank))
-                winners (array of int)
-      PAYING_OUT: pot_winnings (array of int (config.max_players size))
-                  net_profit (array of int (config.max_players size))
 
     """
     def __init__(self, event_type, **kwargs):
