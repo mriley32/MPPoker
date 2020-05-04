@@ -158,6 +158,7 @@ class Hand:
       board: cards.PlayerCards for the comunity cards
       ranks: ranks of all hands present at showdown
       winners: list of winners
+      pot_winnings: amount won from the pot
     """
     def __init__(self, config, players, button_pos, deck_factory):
         """Creates the hand.
@@ -179,7 +180,7 @@ class Hand:
         self.board = cards.PlayerCards()
         self.ranks = None
         self.winners = None
-        self.net_winnings = None
+        self.pot_winnings = None
 
     def ante(self):
         if self.config.ante == 0:
@@ -218,8 +219,12 @@ class Hand:
             self.ranks.append(p.hole_cards.combine(self.board).hand_rank())
         best_hand = max(self.ranks)
         self.winners = [i for i, rank in enumerate(self.ranks) if rank == best_hand]
+        self.pot_winnings = [_none_or_func(lambda _: 0, p) for p in self.players]
         for idx in self.winners:
-            self.players[idx].stack += self.pot / len(self.winners)
+            amount_won = self.pot // len(self.winners)
+            self.pot_winnings[idx] += amount_won
+            self.players[idx].stack += amount_won
+            
 
         
 @enum.unique
@@ -386,11 +391,8 @@ class Manager:
 
         elif self.state == GameState.SHOWDOWN:
             self.state = GameState.PAYING_OUT
-            # TODO: we obviously aren't dealing with any pot now
-            self._notify(Event(
-                EventType.PAYING_OUT,
-                net_profit=[0] * self.config.max_players,
-                pot_winnings=[0] * self.config.max_players))
+            event = self._handle_payouts()
+            self._notify(event)
             
         elif self.state == GameState.PAYING_OUT:
             self.current_hand = None
@@ -405,6 +407,18 @@ class Manager:
         else:
             raise ValueError("Unknown state {}".format(self.state))
 
+    def _handle_payouts(self):
+        net_profit = [_none_or_func(lambda p: p.stack - p.initial_stack, p)
+                      for p in self.current_hand.players]
+        for p, net in zip(self.players, net_profit):
+            if p is None or net is None:
+                continue
+            p.stack += net
+        return Event(
+                EventType.PAYING_OUT,
+                net_profit=net_profit,
+                pot_winnings=self.current_hand.pot_winnings)
+        
     def _advance_button(self):
         if self.button_pos is None:
             if self.num_players() == 0:

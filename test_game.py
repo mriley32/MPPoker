@@ -228,8 +228,8 @@ class MainStatesTestCase(unittest.TestCase):
         self.assertEqual(1, len(self.recorder.events))
         self.assertEqual(
             "Event(EventType.PAYING_OUT" +
-            ", net_profit=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"
-            ", pot_winnings=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"
+            ", net_profit=[0, None, 0, None, 0, None, None, None, None, None]"
+            ", pot_winnings=[0, None, 0, None, 0, None, None, None, None, None]"
             ")",
             str(self.recorder.events[0]))
 
@@ -307,6 +307,9 @@ class ShowdownTestCase(unittest.TestCase):
             self.manager.add_player(game.Player("name{}".format(idx), 1000))
         for idx in [1, 3]:
             self.manager.remove_player(idx)
+        self.recorder = game.RecordingListener()
+        self.manager.add_listener(self.recorder)
+
 
     def advance_to_showdown(self, player_cards, board):
         self.manager._deck_factory = deck_factory_from_cards(player_cards, board)
@@ -325,6 +328,19 @@ class ShowdownTestCase(unittest.TestCase):
         self.assertEqual(900, self.manager.current_hand.players[0].stack)
         self.assertEqual(1200, self.manager.current_hand.players[2].stack)
         self.assertEqual(900, self.manager.current_hand.players[4].stack)
+        self.recorder.clear()
+        self.manager.proceed()
+        self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(game.EventType.PAYING_OUT,
+                         self.recorder.events[0].event_type)
+        self.assertEqual([-100, None, 200, None, -100, None, None, None, None, None],
+                         self.recorder.events[0].args['net_profit'])
+        self.assertEqual([0, None, 300, None, 0, None, None, None, None, None],
+                         self.recorder.events[0].args['pot_winnings'])
+        self.assertEqual(900, self.manager.players[0].stack)
+        self.assertEqual(1200, self.manager.players[2].stack)
+        self.assertEqual(900, self.manager.players[4].stack)
         
     def test_two_winner(self):
         self.advance_to_showdown(["As Ks", "Ad Kd", "Jd Td"],
@@ -333,6 +349,19 @@ class ShowdownTestCase(unittest.TestCase):
         self.assertEqual(1050, self.manager.current_hand.players[0].stack)
         self.assertEqual(1050, self.manager.current_hand.players[2].stack)
         self.assertEqual(900, self.manager.current_hand.players[4].stack)
+        self.recorder.clear()
+        self.manager.proceed()
+        self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(game.EventType.PAYING_OUT,
+                         self.recorder.events[0].event_type)
+        self.assertEqual([50, None, 50, None, -100, None, None, None, None, None],
+                         self.recorder.events[0].args['net_profit'])
+        self.assertEqual([150, None, 150, None, 0, None, None, None, None, None],
+                         self.recorder.events[0].args['pot_winnings'])
+        self.assertEqual(1050, self.manager.players[0].stack)
+        self.assertEqual(1050, self.manager.players[2].stack)
+        self.assertEqual(900, self.manager.players[4].stack)
 
     def test_play_the_board_missing_player(self):
         # This test is a little weird because it's testing something
