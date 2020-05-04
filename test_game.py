@@ -292,6 +292,7 @@ class AnteTestCase(unittest.TestCase):
                          self.recorder.events[0].event_type)
         self.assertEqual(game.EventType.ANTE,
                          self.recorder.events[1].event_type)
+        self.assertEqual(100, self.recorder.events[1].args["amount"])
         self.assertEqual([0, 1], self.recorder.events[1].args["player_indices"])
 
 

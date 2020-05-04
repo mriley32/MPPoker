@@ -448,7 +448,9 @@ class Manager:
         events.append(Event(EventType.HAND_STARTED, players=self.current_hand.players))
         players_who_anted = self.current_hand.ante()
         if players_who_anted:
-            events.append(Event(EventType.ANTE, player_indices=players_who_anted))
+            events.append(Event(EventType.ANTE,
+                                amount=self.config.ante,
+                                player_indices=players_who_anted))
         return events
 
         
