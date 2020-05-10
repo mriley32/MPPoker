@@ -107,20 +107,23 @@ class Event:
 
     Attributes:
       event_type: the type of event (one of the enum EventType)
-      args: a dictionary with the arguments for this event. The expected contents
-            are documented in EventType above.
+      <kwargs>: Everything passed in to kwargs in the constructor are turned into
+        attributes on the Event. For example, in the PAYING_OUT events, you can access
+        event.pot_winnings and event.net_profit
 
-    Expected arguments by type:
-
+    The expected attributes are documented in EventType above.
     """
     def __init__(self, event_type, **kwargs):
         self.event_type = event_type
-        self.args = kwargs
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def __str__(self):
         args_strs = []
-        for key in sorted(self.args.keys()):
-            args_strs.append("{}={}".format(key, self.args[key]))
+        for key in sorted(self.__dict__.keys()):
+            if key == "event_type":
+                continue
+            args_strs.append("{}={}".format(key, getattr(self, key)))
         return "Event({}, {})".format(self.event_type, ", ".join(args_strs))
 
 

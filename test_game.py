@@ -150,7 +150,7 @@ class MainStatesTestCase(unittest.TestCase):
             "None, " +
             "None, " +
             "None",
-            ', '.join(str(p) for p in self.recorder.events[0].args["players"]))
+            ', '.join(str(p) for p in self.recorder.events[0].players))
 
         self.recorder.clear()
         self.manager.proceed()
@@ -171,7 +171,7 @@ class MainStatesTestCase(unittest.TestCase):
             "None, " +
             "None, " +
             "None",
-            ', '.join(str(p) for p in self.recorder.events[0].args["cards"]))
+            ', '.join(str(p) for p in self.recorder.events[0].cards))
 
         self.recorder.clear()
         self.manager.proceed()
@@ -250,7 +250,7 @@ class MainStatesTestCase(unittest.TestCase):
             "None, " +
             "None, " +
             "None",
-            ', '.join(str(p) for p in self.recorder.events[0].args["players"]))
+            ', '.join(str(p) for p in self.recorder.events[0].players))
 
     def test_paying_out_to_waiting(self):
         self.manager.start_game()
@@ -292,8 +292,8 @@ class AnteTestCase(unittest.TestCase):
                          self.recorder.events[0].event_type)
         self.assertEqual(game.EventType.ANTE,
                          self.recorder.events[1].event_type)
-        self.assertEqual(100, self.recorder.events[1].args["amount"])
-        self.assertEqual([0, 1], self.recorder.events[1].args["player_indices"])
+        self.assertEqual(100, self.recorder.events[1].amount)
+        self.assertEqual([0, 1], self.recorder.events[1].player_indices)
 
 
 def deck_factory_from_cards(player_cards, board):
@@ -336,9 +336,9 @@ class ShowdownTestCase(unittest.TestCase):
         self.assertEqual(game.EventType.PAYING_OUT,
                          self.recorder.events[0].event_type)
         self.assertEqual([-100, None, 200, None, -100, None, None, None, None, None],
-                         self.recorder.events[0].args['net_profit'])
+                         self.recorder.events[0].net_profit)
         self.assertEqual([0, None, 300, None, 0, None, None, None, None, None],
-                         self.recorder.events[0].args['pot_winnings'])
+                         self.recorder.events[0].pot_winnings)
         self.assertEqual(900, self.manager.players[0].stack)
         self.assertEqual(1200, self.manager.players[2].stack)
         self.assertEqual(900, self.manager.players[4].stack)
@@ -357,9 +357,9 @@ class ShowdownTestCase(unittest.TestCase):
         self.assertEqual(game.EventType.PAYING_OUT,
                          self.recorder.events[0].event_type)
         self.assertEqual([50, None, 50, None, -100, None, None, None, None, None],
-                         self.recorder.events[0].args['net_profit'])
+                         self.recorder.events[0].net_profit)
         self.assertEqual([150, None, 150, None, 0, None, None, None, None, None],
-                         self.recorder.events[0].args['pot_winnings'])
+                         self.recorder.events[0].pot_winnings)
         self.assertEqual(1050, self.manager.players[0].stack)
         self.assertEqual(1050, self.manager.players[2].stack)
         self.assertEqual(900, self.manager.players[4].stack)
