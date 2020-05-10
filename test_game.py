@@ -254,11 +254,8 @@ class MainStatesTestCase(unittest.TestCase):
 
     def test_paying_out_to_waiting(self):
         self.manager.start_game()
-        # Kind of a dumb test because it's relying on 6 stages to get
-        # to paying out, but we'll deal with it later.
-        for _ in range(6):
+        while self.manager.state != game.GameState.PAYING_OUT:
             self.manager.proceed()
-        self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
         for idx in [2, 4]:
             self.manager.remove_player(idx)
         self.recorder.clear()
@@ -316,11 +313,8 @@ class ShowdownTestCase(unittest.TestCase):
         self.manager._deck_factory = deck_factory_from_cards(player_cards, board)
 
         self.manager.start_game()
-        # Kind of a dumb test because it's relying on the number of
-        # stages to get to SHOWDOWN, but we'll deal with it later.
-        for _ in range(5):
+        while self.manager.state != game.GameState.SHOWDOWN:
             self.manager.proceed()
-        self.assertEqual(game.GameState.SHOWDOWN, self.manager.state)
 
     def test_single_winner(self):
         self.advance_to_showdown(["Ks 2c", "As 3c", "Js 4c"],
@@ -373,7 +367,7 @@ class ShowdownTestCase(unittest.TestCase):
             "Ac Kd Qh Jd Tc")
 
         self.manager.start_game()
-        for _ in range(4):
+        while self.manager.state != game.GameState.RIVER_DEALT:
             self.manager.proceed()
         self.manager.current_hand.players[2].hole_cards = None
         self.manager.proceed()
