@@ -10,7 +10,7 @@ class AddRemoveTestCase(unittest.TestCase):
         self.manager = game.Manager(game.Configuration())
         self.recorder = game.RecordingListener()
         self.manager.add_listener(self.recorder)
-    
+
     def test_add_player(self):
         player = game.Player("myname", 1000)
         self.assertEqual(0, self.manager.add_player(player))
@@ -38,7 +38,7 @@ class AddRemoveTestCase(unittest.TestCase):
         # We clear the recorder here because we don't care what
         # happened before the thing we wanted to test.
         self.recorder.clear()
-        
+
         removed = self.manager.remove_player(1)
         self.assertEqual("name1", removed.name)
         self.assertEqual(1000, removed.stack)
@@ -48,7 +48,7 @@ class AddRemoveTestCase(unittest.TestCase):
         self.assertEqual(
             "Event(EventType.PLAYER_REMOVED, player=Player(name1, 1000, 1))",
             str(self.recorder.events[0]))
-        
+
         with self.assertRaises(game.NoSuchPlayerError):
             self.manager.remove_player(4)
 
@@ -109,8 +109,8 @@ class AdvanceButtonTestCase(unittest.TestCase):
 
 def in_order_deck_factory():
     return deck.Deck()
-        
-        
+
+
 class MainStatesTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = game.Manager(game.Configuration())
@@ -125,7 +125,7 @@ class MainStatesTestCase(unittest.TestCase):
         self.manager.add_listener(self.recorder)
         # we do long string diffs
         self.maxDiff = None
-        
+
     def test_start_game(self):
         self.manager.start_game()
         self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
@@ -270,7 +270,7 @@ class MainStatesTestCase(unittest.TestCase):
         with self.assertRaises(game.WaitingForStartError):
             self.manager.proceed()
 
-            
+
 class AnteTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = game.Manager(game.Configuration(ante=100))
@@ -296,7 +296,7 @@ class AnteTestCase(unittest.TestCase):
 def deck_factory_from_cards(player_cards, board):
     return lambda: deck.Deck.from_initial_cards_str(
         " ".join(player_cards) + " " + board)
-            
+
 class ShowdownTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = game.Manager(game.Configuration(ante=100))
@@ -336,7 +336,7 @@ class ShowdownTestCase(unittest.TestCase):
         self.assertEqual(900, self.manager.players[0].stack)
         self.assertEqual(1200, self.manager.players[2].stack)
         self.assertEqual(900, self.manager.players[4].stack)
-        
+
     def test_two_winner(self):
         self.advance_to_showdown(["As Ks", "Ad Kd", "Jd Td"],
                                  "Ac Kc 2h 3h 4h")
@@ -358,6 +358,19 @@ class ShowdownTestCase(unittest.TestCase):
         self.assertEqual(1050, self.manager.players[2].stack)
         self.assertEqual(900, self.manager.players[4].stack)
 
+    def test_two_winner_unequal_pot(self):
+        # Kind of a hack -- we adjust the configuration after the manager is created.
+        # This will make a pot of 21, split two ways
+        self.manager.config.ante = 7
+        self.manager.button_pos = 9  # we want it to advance to position 0
+        self.advance_to_showdown(["As Ks", "Ad Kd", "Jd Td"],
+                                 "Ac Kc 2h 3h 4h")
+        self.assertEqual(0, self.manager.current_hand.button_pos)
+        self.assertEqual([0, 2], self.manager.current_hand.winners)
+        self.assertEqual(1003, self.manager.current_hand.players[0].stack)
+        self.assertEqual(1004, self.manager.current_hand.players[2].stack)
+        self.assertEqual(993, self.manager.current_hand.players[4].stack)
+
     def test_play_the_board_missing_player(self):
         # This test is a little weird because it's testing something
         # that can't actually happen right now because we have no
@@ -376,8 +389,8 @@ class ShowdownTestCase(unittest.TestCase):
         self.assertEqual(1050, self.manager.current_hand.players[0].stack)
         self.assertEqual(900, self.manager.current_hand.players[2].stack)
         self.assertEqual(1050, self.manager.current_hand.players[4].stack)
-        
 
-    
+
+
 if __name__ == '__main__':
     unittest.main()

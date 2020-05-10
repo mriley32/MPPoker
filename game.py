@@ -41,6 +41,7 @@ class Configuration:
 
     Attributes:
       max_players: number of spots in the game
+      ante: amount of the ante
     """
     def __init__(self, max_players=10, ante=0):
         self.max_players = max_players
@@ -216,6 +217,7 @@ class Hand:
         self.board.cards.extend(self.deck.deal(1))
 
     def showdown(self):
+        # Find the winners
         self.ranks = []
         for p in self.players:
             if p is None or p.hole_cards is None:
@@ -224,11 +226,23 @@ class Hand:
             self.ranks.append(p.hole_cards.combine(self.board).hand_rank())
         best_hand = max(self.ranks)
         self.winners = [i for i, rank in enumerate(self.ranks) if rank == best_hand]
+
+        # Distribute the pot, possibly splitting
         self.pot_winnings = [_none_or_func(lambda _: 0, p) for p in self.players]
         for idx in self.winners:
             amount_won = self.pot // len(self.winners)
             self.pot_winnings[idx] += amount_won
             self.players[idx].stack += amount_won
+
+        # Distribute the extra chips to the first person to act
+        extra_chips = self.pot % len(self.winners)
+        for offset in range(1, self.config.max_players + 1):
+            idx = (self.button_pos + offset) % self.config.max_players
+            if idx in self.winners:
+                self.pot_winnings[idx] += extra_chips
+                self.players[idx].stack += extra_chips
+                break
+
 
 
 
