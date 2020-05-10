@@ -45,8 +45,8 @@ class Configuration:
     def __init__(self, max_players=10, ante=0):
         self.max_players = max_players
         self.ante = ante
-    
-    
+
+
 class Player:
     """Player represents the state of of the player.
 
@@ -72,7 +72,7 @@ class EventType(enum.Enum):
     PLAYER_REMOVED = 1
     # Expected args: None
     WAITING_FOR_START = 2
-    # Expected args: players (array of HandPlayer) 
+    # Expected args: players (array of HandPlayer)
     HAND_STARTED = 3
     # Expected args: player_indices (array of int)
     ANTE = 4
@@ -172,7 +172,7 @@ class Hand:
           config: Configuration
           players: array of Player
           button_pos: integer button postion
-          deck_factory: function which returns a deck.Deck (for injection during 
+          deck_factory: function which returns a deck.Deck (for injection during
             unittests, normally it's shuffled_deck_factory)
         """
         self.config = config
@@ -199,7 +199,7 @@ class Hand:
             player.stack -= self.config.ante
             players_who_anted.append(pos)
         return players_who_anted
-        
+
     def deal_hole_cards(self):
         for p in self.players:
             if p is None:
@@ -229,9 +229,9 @@ class Hand:
             amount_won = self.pot // len(self.winners)
             self.pot_winnings[idx] += amount_won
             self.players[idx].stack += amount_won
-            
 
-        
+
+
 @enum.unique
 class GameState(enum.Enum):
     WAITING_FOR_START = 0
@@ -354,13 +354,15 @@ class Manager:
             self._notify(e)
 
     def proceed(self):
+        events = []
+
         if self.state == GameState.WAITING_FOR_START:
             raise WaitingForStartError()
 
         elif self.state == GameState.PRE_DEAL:
             self.current_hand.deal_hole_cards()
             self.state = GameState.HOLE_CARDS_DEALT
-            self._notify(Event(
+            events.append(Event(
                 EventType.HOLE_CARDS_DEALT,
                 cards=[_none_or_func(lambda p: p.hole_cards, p)
                        for p in self.current_hand.players]))
@@ -368,49 +370,50 @@ class Manager:
         elif self.state == GameState.HOLE_CARDS_DEALT:
             self.current_hand.deal_flop()
             self.state = GameState.FLOP_DEALT
-            self._notify(Event(
+            events.append(Event(
                 EventType.FLOP_DEALT,
                 cards=self.current_hand.board))
 
         elif self.state == GameState.FLOP_DEALT:
             self.current_hand.deal_turn()
             self.state = GameState.TURN_DEALT
-            self._notify(Event(
+            events.append(Event(
                 EventType.TURN_DEALT,
                 card=self.current_hand.board.cards[-1]))
 
         elif self.state == GameState.TURN_DEALT:
             self.current_hand.deal_river()
             self.state = GameState.RIVER_DEALT
-            self._notify(Event(
+            events.append(Event(
                 EventType.RIVER_DEALT,
                 card=self.current_hand.board.cards[-1]))
 
         elif self.state == GameState.RIVER_DEALT:
             self.current_hand.showdown()
             self.state = GameState.SHOWDOWN
-            self._notify(Event(
+            events.append(Event(
                 EventType.SHOWDOWN,
                 ranks=self.current_hand.ranks,
                 winners=self.current_hand.winners))
 
         elif self.state == GameState.SHOWDOWN:
             self.state = GameState.PAYING_OUT
-            event = self._handle_payouts()
-            self._notify(event)
-            
+            events.append(self._handle_payouts())
+
         elif self.state == GameState.PAYING_OUT:
             self.current_hand = None
             if self.num_players() > 1:
-                events = self._create_hand()
+                events.extend(self._create_hand())
                 self.state = GameState.PRE_DEAL
-                for e in events:
-                    self._notify(e)
             else:
                 self.state = GameState.WAITING_FOR_START
-                self._notify(Event(EventType.WAITING_FOR_START))
+                events.append(Event(EventType.WAITING_FOR_START))
         else:
             raise ValueError("Unknown state {}".format(self.state))
+
+        for e in events:
+            self._notify(e)
+
 
     def _handle_payouts(self):
         net_profit = [_none_or_func(lambda p: p.stack - p.initial_stack, p)
@@ -423,7 +426,7 @@ class Manager:
                 EventType.PAYING_OUT,
                 net_profit=net_profit,
                 pot_winnings=self.current_hand.pot_winnings)
-        
+
     def _advance_button(self):
         if self.button_pos is None:
             if self.num_players() == 0:
@@ -456,7 +459,7 @@ class Manager:
                                 player_indices=players_who_anted))
         return events
 
-        
+
     def _notify(self, event):
         for listener in self._listeners:
             listener.notify(event)
