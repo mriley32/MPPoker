@@ -28,6 +28,11 @@ class NotReadyError(Exception):
 class WaitingForStartError(NotReadyError):
     pass
 
+class ActionOutOfTurnError(Exception):
+    def __init__(self, player_idx, action_on):
+        self.player_idx = player_idx
+        self.action_on = action_on
+
 
 def _none_or_func(f, x):
     """Return None if x is None, f(x) otherwise"""
@@ -49,12 +54,17 @@ class Configuration:
 
     Attributes:
       max_players: number of spots in the game
+      game_type: of type GameType
       ante: amount of the ante
+      limits: if game_type == LIMIT, a 2 tuple of the betting limits
     """
-    def __init__(self, max_players=10, game_type=GameType.NO_BETTING, ante=0):
+    def __init__(self, max_players=10, game_type=GameType.NO_BETTING, ante=0, limits=None):
         self.max_players = max_players
         self.game_type = game_type
         self.ante = ante
+        if limits is not None and len(limits) != 2:
+            raise ValueError("Invalid limits {}".format(limits))
+        self.limits = limits
 
 
 class Player:
@@ -159,17 +169,30 @@ class ActionType(enum.Enum):
     CALL = 2
     RAISE = 3
     FOLD = 4
+    BLIND_BET = 5
 
 
 class Action:
-    def __init__(self, action_type, amount=None):
+    def __init__(self, player_idx, action_type, amount=None):
+        """Initialize single player's action.
+
+        Args:
+          player_idx: index of player acting
+          action_type: ActionType
+          amount: amount of action, only for BET and RAISE
+        """
+        self.player_idx = player_idx
         self.action_type = action_type
-        if action_type == CHECK or action_type == CALL or action_type == FOLD:
-            if amount != 0:
+        if action_type == ActionType.CHECK or action_type == ActionType.CALL or action_type == ActionType.FOLD:
+            if amount is not None:
                 raise ValueError("On action {}, amount must not be specified (got {})"
                                  .format(action_type, amount))
-        else:
+        elif action_type == ActionType.BET or action_type == ActionType.RAISE:
+            if amount is None:
+                raise ValueError("On action {}, amount must be specified".format(action_type))
             self.amount = amount
+        else:
+            raise ValueError("Didn't understand action_type {}".format(action_type))
 
 
 class HandPlayer:
@@ -213,7 +236,7 @@ class Hand:
           players: array of Player
           button_pos: integer button postion
           deck_factory: function which returns a deck.Deck (for injection during
-            unittests, normally it's shuffled_deck_factory)
+            unittests, normally it's _shuffled_deck_factory)
         """
         self.config = config
         self.deck = deck_factory()
@@ -221,11 +244,15 @@ class Hand:
         self.button_pos = button_pos
         if self.players[button_pos] is None:
             raise ValueError("No player on button {}".format(button_pos))
+
         self.pot = 0
         self.board = cards.PlayerCards()
         self.ranks = None
         self.winners = None
         self.pot_winnings = None
+
+        self.action_on = None
+        self.past_action = None
 
     def ante(self):
         if self.config.ante == 0:
@@ -240,11 +267,63 @@ class Hand:
             players_who_anted.append(pos)
         return players_who_anted
 
+    def live_players(self):
+        return [p is not None and p.hole_cards is not None
+                for p in self.players]
+
+    def _start_betting_round(self):
+        if self.config.game_type == GameType.NO_BETTING:
+            return
+        assert self.config.game_type == GameType.LIMIT
+        self.action_on = _next_valid_position(self.button_pos, self.live_players())
+        self.past_action = []
+        self.current_outlay = [0] * len(self.players)
+
+    def _has_acted(self, player_idx):
+        for a in self.past_action:
+            if a.player_idx == player_idx:
+                return True
+        return False
+
+    def _equal_outlay(self):
+        live_outlay = [x for x, live in zip(self.current_outlay, self.live_players()) if live]
+        return max(live_outlay) == min(live_outlay)
+
+    def act(self, action):
+        """Performs the given action.
+
+        Args:
+          action: Action
+        """
+        if self.action_on != action.player_idx:
+            raise ActionOutOfTurnError(action.player_idx, self.action_on)
+
+        # Do stuff with the action here
+
+        self.past_action.append(action)
+
+        self.action_on = _next_valid_position(self.action_on, self.live_players())
+        if self._has_acted(self.action_on) and self._equal_outlay():
+            # We can finish this betting round!
+            self.action_on = None
+            self.past_action = None
+            self.current_outlay = None
+
+    def is_betting_active(self):
+        """Returns whether a betting round is in progress.
+
+        Returns:
+          boolean
+        """
+        return self.action_on is not None
+
     def deal_hole_cards(self):
         for p in self.players:
             if p is None:
                 continue
             p.hole_cards = cards.PlayerCards(self.deck.deal(2))
+
+        self._start_betting_round()
 
     def deal_flop(self):
         self.board.cards.extend(self.deck.deal(3))
