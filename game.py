@@ -142,6 +142,16 @@ def _shuffled_deck_factory():
     d.shuffle
     return d
 
+
+def _next_valid_position(current_pos, valid_players):
+    next_pos = None
+    for offset in range(1, len(valid_players) + 1):
+        try_pos = (current_pos + offset) % len(valid_players)
+        if valid_players[try_pos]:
+            return try_pos
+    raise NotEnoughPlayersError()
+
+
 @enum.unique
 class ActionType(enum.Enum):
     CHECK = 0
@@ -477,16 +487,12 @@ class Manager:
             self.button_pos = random.choice(
                 [i for i, p in enumerate(self.players) if p is not None])
         else:
-            chosen_button = None
-            for offset in range(1, self.config.max_players + 1):
-                try_pos = (self.button_pos + offset) % self.config.max_players
-                if self.players[try_pos] is not None:
-                    chosen_button = try_pos
-                    break
-            if chosen_button is None:
+            try:
+                self.button_pos = _next_valid_position(
+                    self.button_pos, [p is not None for p in self.players])
+            except NotEnoughPlayersError:
                 self.button_pos = None
-                raise NotEnoughPlayersError()
-            self.button_pos = chosen_button
+                raise
 
     def _create_hand(self):
         events = []
