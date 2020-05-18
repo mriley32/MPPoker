@@ -36,6 +36,14 @@ def _none_or_func(f, x):
     return f(x)
 
 
+@enum.unique
+class GameType(enum.Enum):
+    # Antes are collected, but no betting rounds
+    NO_BETTING = 0
+    # Standard limit with one size for pre-flop and flop and one for turn and river.
+    LIMIT = 1
+
+
 class Configuration:
     """Data class for configuration of the game.
 
@@ -43,8 +51,9 @@ class Configuration:
       max_players: number of spots in the game
       ante: amount of the ante
     """
-    def __init__(self, max_players=10, ante=0):
+    def __init__(self, max_players=10, game_type=GameType.NO_BETTING, ante=0):
         self.max_players = max_players
+        self.game_type = game_type
         self.ante = ante
 
 
@@ -132,6 +141,26 @@ def _shuffled_deck_factory():
     d = deck.Deck()
     d.shuffle
     return d
+
+@enum.unique
+class ActionType(enum.Enum):
+    CHECK = 0
+    BET = 1
+    CALL = 2
+    RAISE = 3
+    FOLD = 4
+
+
+class Action:
+    def __init__(self, action_type, amount=None):
+        self.action_type = action_type
+        if action_type == CHECK or action_type == CALL or action_type == FOLD:
+            if amount != 0:
+                raise ValueError("On action {}, amount must not be specified (got {})"
+                                 .format(action_type, amount))
+        else:
+            self.amount = amount
+
 
 class HandPlayer:
     """Controls the state of a player for one deal/pot."""
