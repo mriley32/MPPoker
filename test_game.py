@@ -392,21 +392,6 @@ class ShowdownTestCase(unittest.TestCase):
 
 
 class LimitBettingRoundTestCase(unittest.TestCase):
-    # Lots of testing to be added
-    # Normal cases
-    # * no blinds, bet, all fold
-    # * no blinds, bet, fold, raise, fold
-    # * no blinds, bet, fold, raise, raise call
-    # * blinds, call around
-    # * blinds, fold to blind
-    # * blinds, call, small blind raises
-    # * blinds, call, big blind raises
-    # Error cases
-    # * acting out of turn
-    # * checking with active bet
-    # * betting when should only call or raise
-    # * blind betting not raising
-    # * betting when no round active
     def setUp(self):
         self.manager = game.Manager(game.Configuration(
             max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200)))
@@ -424,36 +409,83 @@ class LimitBettingRoundTestCase(unittest.TestCase):
     def get_stacks(self):
         return [game._none_or_func(lambda p: p.stack, p) for p in self.manager.current_hand.players]
 
+    def perform_actions(self, actions):
+        for a in actions:
+            self.assertTrue(self.manager.current_hand.is_betting_active())
+            self.manager.current_hand.act(a)
+
     def test_no_blinds_check_around(self):
-        self.manager.current_hand.act(game.Action(4, game.ActionType.CHECK))
-        self.assertTrue(self.manager.current_hand.is_betting_active())
-        self.manager.current_hand.act(game.Action(0, game.ActionType.CHECK))
-        self.assertTrue(self.manager.current_hand.is_betting_active())
-        self.manager.current_hand.act(game.Action(1, game.ActionType.CHECK))
-        self.assertTrue(self.manager.current_hand.is_betting_active())
-        self.manager.current_hand.act(game.Action(3, game.ActionType.CHECK))
+        self.perform_actions([
+            game.Action(4, game.ActionType.CHECK),
+            game.Action(0, game.ActionType.CHECK),
+            game.Action(1, game.ActionType.CHECK),
+            game.Action(3, game.ActionType.CHECK),
+            ])
 
         self.assertFalse(self.manager.current_hand.is_betting_active())
         self.assertEqual(0, self.manager.current_hand.pot)
         self.assertEqual([1000, 1000, None, 1000, 1000], self.get_stacks())
         self.assertEqual([True, True, False, True, True], self.manager.current_hand.live_players())
 
-    @unittest.skip("still working on code")
     def test_no_blinds_bet_call(self):
-        self.manager.current_hand.act(game.Action(4, game.ActionType.CHECK))
-        self.assertTrue(self.manager.current_hand.is_betting_active())
-        self.manager.current_hand.act(game.Action(0, game.ActionType.BET, amount=100))
-        self.assertTrue(self.manager.current_hand.is_betting_active())
-        self.manager.current_hand.act(game.Action(1, game.ActionType.CALL))
-        self.assertTrue(self.manager.current_hand.is_betting_active())
-        self.manager.current_hand.act(game.Action(3, game.ActionType.CALL))
-        self.assertTrue(self.manager.current_hand.is_betting_active())
-        self.manager.current_hand.act(game.Action(4, game.ActionType.CALL))
+        self.perform_actions([
+            game.Action(4, game.ActionType.CHECK),
+            game.Action(0, game.ActionType.BET, amount=100),
+            game.Action(1, game.ActionType.CALL),
+            game.Action(3, game.ActionType.CALL),
+            game.Action(4, game.ActionType.CALL),
+            ])
 
         self.assertFalse(self.manager.current_hand.is_betting_active())
-        self.assertEqual(40, self.manager.current_hand.pot)
+        self.assertEqual(400, self.manager.current_hand.pot)
         self.assertEqual([900, 900, None, 900, 900], self.get_stacks())
         self.assertEqual([True, True, False, True, True], self.manager.current_hand.live_players())
+
+    def test_no_blinds_bet_all_fold(self):
+        self.perform_actions([
+            game.Action(4, game.ActionType.CHECK),
+            game.Action(0, game.ActionType.BET, amount=100),
+            game.Action(1, game.ActionType.FOLD),
+            game.Action(3, game.ActionType.FOLD),
+            game.Action(4, game.ActionType.FOLD),
+            ])
+
+        self.assertFalse(self.manager.current_hand.is_betting_active())
+        self.assertEqual(100, self.manager.current_hand.pot)
+        self.assertEqual([900, 1000, None, 1000, 1000], self.get_stacks())
+        self.assertEqual([True, False, False, False, False], self.manager.current_hand.live_players())
+
+    def test_no_blinds_bet_raise_fold_call(self):
+        self.perform_actions([
+            game.Action(4, game.ActionType.BET, amount=100),
+            game.Action(0, game.ActionType.CALL),
+            game.Action(1, game.ActionType.RAISE, amount=100),
+            game.Action(3, game.ActionType.FOLD),
+            game.Action(4, game.ActionType.CALL),
+            game.Action(0, game.ActionType.FOLD),
+            ])
+
+        self.assertFalse(self.manager.current_hand.is_betting_active())
+        self.assertEqual(500, self.manager.current_hand.pot)
+        self.assertEqual([900, 800, None, 1000, 800], self.get_stacks())
+        self.assertEqual([False, True, False, False, True], self.manager.current_hand.live_players())
+
+
+    # Lots of testing to be added
+    # Normal cases
+    # * no blinds, bet, all fold
+    # * no blinds, bet, fold, raise, fold
+    # * no blinds, bet, fold, raise, raise call
+    # * blinds, call around
+    # * blinds, fold to blind
+    # * blinds, call, small blind raises
+    # * blinds, call, big blind raises
+    # Error cases
+    # * acting out of turn
+    # * checking with active bet
+    # * betting when should only call or raise
+    # * blind betting not raising
+    # * betting when no round active
 
 
 if __name__ == '__main__':

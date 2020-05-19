@@ -289,6 +289,9 @@ class Hand:
         live_outlay = [x for x, live in zip(self.current_outlay, self.live_players()) if live]
         return max(live_outlay) == min(live_outlay)
 
+    def _current_total_bet(self):
+        return max(self.current_outlay)
+
     def act(self, action):
         """Performs the given action.
 
@@ -299,11 +302,31 @@ class Hand:
             raise ActionOutOfTurnError(action.player_idx, self.action_on)
 
         # Do stuff with the action here
+        if action.action_type == ActionType.CHECK:
+            pass
+        elif action.action_type == ActionType.BET:
+            self.players[action.player_idx].stack -= action.amount
+            self.current_outlay[action.player_idx] += action.amount
+        elif action.action_type == ActionType.CALL:
+            amount = self._current_total_bet() - self.current_outlay[action.player_idx]
+            self.players[action.player_idx].stack -= amount
+            self.current_outlay[action.player_idx] += amount
+        elif action.action_type == ActionType.RAISE:
+            total_amount = self._current_total_bet() - self.current_outlay[action.player_idx] + action.amount
+            self.players[action.player_idx].stack -= total_amount
+            self.current_outlay[action.player_idx] += total_amount
+        elif action.action_type == ActionType.FOLD:
+            self.players[action.player_idx].hole_cards = None
+        elif action.action_type == ActionType.BLIND_BET:
+            raise ValueError("Can not be handle BLIND_BET")
+        else:
+            raise ValueError("Did not understand action {}".format(action))
 
         self.past_action.append(action)
 
         self.action_on = _next_valid_position(self.action_on, self.live_players())
         if self._has_acted(self.action_on) and self._equal_outlay():
+            self.pot += sum(self.current_outlay)
             # We can finish this betting round!
             self.action_on = None
             self.past_action = None
