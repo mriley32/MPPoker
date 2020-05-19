@@ -470,12 +470,25 @@ class LimitBettingRoundTestCase(unittest.TestCase):
         self.assertEqual([900, 800, None, 1000, 800], self.get_stacks())
         self.assertEqual([False, True, False, False, True], self.manager.current_hand.live_players())
 
+    def test_no_blinds_reraise(self):
+        self.perform_actions([
+            game.Action(4, game.ActionType.BET, amount=100),
+            game.Action(0, game.ActionType.CALL),
+            game.Action(1, game.ActionType.RAISE, amount=100),
+            game.Action(3, game.ActionType.FOLD),
+            game.Action(4, game.ActionType.RAISE, amount=100),
+            game.Action(0, game.ActionType.FOLD),
+            game.Action(1, game.ActionType.CALL),
+            ])
+
+        self.assertFalse(self.manager.current_hand.is_betting_active())
+        self.assertEqual(700, self.manager.current_hand.pot)
+        self.assertEqual([900, 700, None, 1000, 700], self.get_stacks())
+        self.assertEqual([False, True, False, False, True], self.manager.current_hand.live_players())
+
 
     # Lots of testing to be added
     # Normal cases
-    # * no blinds, bet, all fold
-    # * no blinds, bet, fold, raise, fold
-    # * no blinds, bet, fold, raise, raise call
     # * blinds, call around
     # * blinds, fold to blind
     # * blinds, call, small blind raises
