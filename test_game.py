@@ -392,9 +392,8 @@ class ShowdownTestCase(unittest.TestCase):
 
 
 class LimitBettingRoundTestCase(unittest.TestCase):
-    def setUp(self):
-        self.manager = game.Manager(game.Configuration(
-            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200)))
+    def initialize(self, config):
+        self.manager = game.Manager(config)
         # We'll create players in postiions 0, 1, 3, 4
         for idx in range(5):
             self.manager.add_player(game.Player("name{}".format(idx), 1000))
@@ -415,6 +414,8 @@ class LimitBettingRoundTestCase(unittest.TestCase):
             self.manager.current_hand.act(a)
 
     def test_no_blinds_check_around(self):
+        self.initialize(game.Configuration(
+            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200)))
         self.perform_actions([
             game.Action(4, game.ActionType.CHECK),
             game.Action(0, game.ActionType.CHECK),
@@ -428,6 +429,8 @@ class LimitBettingRoundTestCase(unittest.TestCase):
         self.assertEqual([True, True, False, True, True], self.manager.current_hand.live_players())
 
     def test_no_blinds_bet_call(self):
+        self.initialize(game.Configuration(
+            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200)))
         self.perform_actions([
             game.Action(4, game.ActionType.CHECK),
             game.Action(0, game.ActionType.BET, amount=100),
@@ -442,6 +445,8 @@ class LimitBettingRoundTestCase(unittest.TestCase):
         self.assertEqual([True, True, False, True, True], self.manager.current_hand.live_players())
 
     def test_no_blinds_bet_all_fold(self):
+        self.initialize(game.Configuration(
+            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200)))
         self.perform_actions([
             game.Action(4, game.ActionType.CHECK),
             game.Action(0, game.ActionType.BET, amount=100),
@@ -456,6 +461,8 @@ class LimitBettingRoundTestCase(unittest.TestCase):
         self.assertEqual([True, False, False, False, False], self.manager.current_hand.live_players())
 
     def test_no_blinds_bet_raise_fold_call(self):
+        self.initialize(game.Configuration(
+            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200)))
         self.perform_actions([
             game.Action(4, game.ActionType.BET, amount=100),
             game.Action(0, game.ActionType.CALL),
@@ -471,6 +478,8 @@ class LimitBettingRoundTestCase(unittest.TestCase):
         self.assertEqual([False, True, False, False, True], self.manager.current_hand.live_players())
 
     def test_no_blinds_reraise(self):
+        self.initialize(game.Configuration(
+            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200)))
         self.perform_actions([
             game.Action(4, game.ActionType.BET, amount=100),
             game.Action(0, game.ActionType.CALL),
@@ -486,19 +495,97 @@ class LimitBettingRoundTestCase(unittest.TestCase):
         self.assertEqual([900, 700, None, 1000, 700], self.get_stacks())
         self.assertEqual([False, True, False, False, True], self.manager.current_hand.live_players())
 
+    def test_blinds_all_call(self):
+        self.initialize(game.Configuration(
+            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200), blinds=(50, 100)))
+        self.perform_actions([
+            game.Action(1, game.ActionType.CALL),
+            game.Action(3, game.ActionType.CALL),
+            game.Action(4, game.ActionType.CALL),
+            game.Action(0, game.ActionType.CHECK),
+            ])
+
+        self.assertFalse(self.manager.current_hand.is_betting_active())
+        self.assertEqual(400, self.manager.current_hand.pot)
+        self.assertEqual([900, 900, None, 900, 900], self.get_stacks())
+        self.assertEqual([True, True, False, True, True], self.manager.current_hand.live_players())
+
+    def test_blinds_raise_all_fold(self):
+        self.initialize(game.Configuration(
+            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200), blinds=(50, 100)))
+        self.perform_actions([
+            game.Action(1, game.ActionType.RAISE, amount=100),
+            game.Action(3, game.ActionType.FOLD),
+            game.Action(4, game.ActionType.FOLD),
+            game.Action(0, game.ActionType.FOLD),
+            ])
+
+        self.assertFalse(self.manager.current_hand.is_betting_active())
+        self.assertEqual(350, self.manager.current_hand.pot)
+        self.assertEqual([900, 800, None, 1000, 950], self.get_stacks())
+        self.assertEqual([False, True, False, False, False], self.manager.current_hand.live_players())
+
+    def test_blinds_fold_to_big_blind(self):
+        self.initialize(game.Configuration(
+            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200), blinds=(50, 100)))
+        self.perform_actions([
+            game.Action(1, game.ActionType.FOLD),
+            game.Action(3, game.ActionType.FOLD),
+            game.Action(4, game.ActionType.FOLD),
+            ])
+
+        self.assertFalse(self.manager.current_hand.is_betting_active())
+        self.assertEqual(150, self.manager.current_hand.pot)
+        self.assertEqual([900, 1000, None, 1000, 950], self.get_stacks())
+        self.assertEqual([True, False, False, False, False], self.manager.current_hand.live_players())
+
+    def test_blinds_small_blind_raise(self):
+        self.initialize(game.Configuration(
+            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200), blinds=(50, 100)))
+        self.perform_actions([
+            game.Action(1, game.ActionType.CALL),
+            game.Action(3, game.ActionType.CALL),
+            game.Action(4, game.ActionType.RAISE, amount=100),
+            game.Action(0, game.ActionType.FOLD),
+            game.Action(1, game.ActionType.CALL),
+            game.Action(3, game.ActionType.CALL),
+            ])
+
+        self.assertFalse(self.manager.current_hand.is_betting_active())
+        self.assertEqual(700, self.manager.current_hand.pot)
+        self.assertEqual([900, 800, None, 800, 800], self.get_stacks())
+        self.assertEqual([False, True, False, True, True], self.manager.current_hand.live_players())
+
+    def test_blinds_big_blind_raise(self):
+        self.initialize(game.Configuration(
+            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200), blinds=(50, 100)))
+        self.perform_actions([
+            game.Action(1, game.ActionType.CALL),
+            game.Action(3, game.ActionType.CALL),
+            game.Action(4, game.ActionType.CALL),
+            game.Action(0, game.ActionType.RAISE, amount=100),
+            game.Action(1, game.ActionType.CALL),
+            game.Action(3, game.ActionType.CALL),
+            game.Action(4, game.ActionType.FOLD),
+            ])
+
+        self.assertFalse(self.manager.current_hand.is_betting_active())
+        self.assertEqual(700, self.manager.current_hand.pot)
+        self.assertEqual([800, 800, None, 800, 900], self.get_stacks())
+        self.assertEqual([True, True, False, True, False], self.manager.current_hand.live_players())
+
+
 
     # Lots of testing to be added
-    # Normal cases
-    # * blinds, call around
-    # * blinds, fold to blind
-    # * blinds, call, small blind raises
-    # * blinds, call, big blind raises
     # Error cases
     # * acting out of turn
     # * checking with active bet
     # * betting when should only call or raise
     # * blind betting not raising
     # * betting when no round active
+    # Other
+    # * Betting on other rounds
+    # * Manager dealing with everyone folding correctly
 
 
 if __name__ == '__main__':

@@ -56,12 +56,14 @@ class Configuration:
       max_players: number of spots in the game
       game_type: of type GameType
       ante: amount of the ante
+      blinds: list of amounts of blinds
       limits: if game_type == LIMIT, a 2 tuple of the betting limits
     """
-    def __init__(self, max_players=10, game_type=GameType.NO_BETTING, ante=0, limits=None):
+    def __init__(self, max_players=10, game_type=GameType.NO_BETTING, ante=0, blinds=None, limits=None):
         self.max_players = max_players
         self.game_type = game_type
         self.ante = ante
+        self.blinds = blinds
         if limits is not None and len(limits) != 2:
             raise ValueError("Invalid limits {}".format(limits))
         self.limits = limits
@@ -183,11 +185,15 @@ class Action:
         """
         self.player_idx = player_idx
         self.action_type = action_type
-        if action_type == ActionType.CHECK or action_type == ActionType.CALL or action_type == ActionType.FOLD:
+        if (action_type == ActionType.CHECK or
+            action_type == ActionType.CALL or
+            action_type == ActionType.FOLD):
             if amount is not None:
                 raise ValueError("On action {}, amount must not be specified (got {})"
                                  .format(action_type, amount))
-        elif action_type == ActionType.BET or action_type == ActionType.RAISE:
+        elif (action_type == ActionType.BET or
+              action_type == ActionType.BLIND_BET or
+              action_type == ActionType.RAISE):
             if amount is None:
                 raise ValueError("On action {}, amount must be specified".format(action_type))
             self.amount = amount
@@ -281,6 +287,8 @@ class Hand:
 
     def _has_acted(self, player_idx):
         for a in self.past_action:
+            if a.action_type == ActionType.BLIND_BET:
+                continue
             if a.player_idx == player_idx:
                 return True
         return False
@@ -304,7 +312,7 @@ class Hand:
         # Do stuff with the action here
         if action.action_type == ActionType.CHECK:
             pass
-        elif action.action_type == ActionType.BET:
+        elif action.action_type == ActionType.BET or action.action_type == ActionType.BLIND_BET:
             self.players[action.player_idx].stack -= action.amount
             self.current_outlay[action.player_idx] += action.amount
         elif action.action_type == ActionType.CALL:
@@ -317,15 +325,15 @@ class Hand:
             self.current_outlay[action.player_idx] += total_amount
         elif action.action_type == ActionType.FOLD:
             self.players[action.player_idx].hole_cards = None
-        elif action.action_type == ActionType.BLIND_BET:
-            raise ValueError("Can not be handle BLIND_BET")
         else:
             raise ValueError("Did not understand action {}".format(action))
 
         self.past_action.append(action)
 
         self.action_on = _next_valid_position(self.action_on, self.live_players())
-        if self._has_acted(self.action_on) and self._equal_outlay():
+
+        if (sum(self.live_players()) == 1 or
+            (self._has_acted(self.action_on) and self._equal_outlay())):
             self.pot += sum(self.current_outlay)
             # We can finish this betting round!
             self.action_on = None
@@ -347,6 +355,9 @@ class Hand:
             p.hole_cards = cards.PlayerCards(self.deck.deal(2))
 
         self._start_betting_round()
+        if self.config.blinds:
+            for blind in self.config.blinds:
+                self.act(Action(player_idx=self.action_on, action_type=ActionType.BLIND_BET, amount=blind))
 
     def deal_flop(self):
         self.board.cards.extend(self.deck.deal(3))
