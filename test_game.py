@@ -588,5 +588,40 @@ class LimitBettingRoundTestCase(unittest.TestCase):
     # * Manager dealing with everyone folding correctly
 
 
+class AllowedActionTestCase(unittest.TestCase):
+    def test_allowed_action_api(self):
+        # This test covers the external API of AllowedAction. Other test cases will verify the code
+        # that generates AllowedAction for different game states.
+        allowed = game.AllowedAction()
+        allowed._player_idx = 3
+        allowed._action_map[game.ActionType.CHECK] = None
+        allowed._action_map[game.ActionType.BET] = (10, 20)
+        self.assertTrue(allowed.is_action_type_allowed(game.ActionType.CHECK))
+        self.assertTrue(allowed.is_action_type_allowed(game.ActionType.BET))
+        self.assertFalse(allowed.is_action_type_allowed(game.ActionType.RAISE))
+
+        with self.assertRaises(ValueError):
+            allowed.range_for_action(game.ActionType.CHECK)
+        with self.assertRaises(game.ActionNotAllowedError):
+            allowed.range_for_action(game.ActionType.RAISE)
+        self.assertEqual((10, 20), allowed.range_for_action(game.ActionType.BET))
+
+        with self.assertRaises(game.ActionNotAllowedError):
+            allowed.check_action(game.Action(3, game.ActionType.CALL))
+        with self.assertRaises(game.ActionOutOfTurnError):
+            allowed.check_action(game.Action(0, game.ActionType.CHECK))
+        with self.assertRaises(game.ActionAmountError):
+            allowed.check_action(game.Action(3, game.ActionType.BET, 9))
+        with self.assertRaises(game.ActionAmountError):
+            allowed.check_action(game.Action(3, game.ActionType.BET, 21))
+        allowed.check_action(game.Action(3, game.ActionType.BET, 10))
+        allowed.check_action(game.Action(3, game.ActionType.BET, 20))
+
+        allowed._action_map[game.ActionType.RAISE] = (100, 200)
+        with self.assertRaises(game.ActionAmountError):
+            allowed.check_action(game.Action(3, game.ActionType.RAISE, 9999))
+        allowed.check_action(game.Action(3, game.ActionType.RAISE, 200))
+
+
 if __name__ == '__main__':
     unittest.main()

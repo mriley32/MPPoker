@@ -28,10 +28,24 @@ class NotReadyError(Exception):
 class WaitingForStartError(NotReadyError):
     pass
 
-class ActionOutOfTurnError(Exception):
+
+class InvalidActionError(Exception):
+    pass
+
+class ActionOutOfTurnError(InvalidActionError):
     def __init__(self, player_idx, action_on):
         self.player_idx = player_idx
         self.action_on = action_on
+
+class ActionNotAllowedError(InvalidActionError):
+    def __init__(self, action_type):
+        self.action_type = action_type
+
+class ActionAmountError(InvalidActionError):
+    def __init__(self, amount, min_amount, max_amount):
+        self.amount = amount
+        self.min_amount = min_amount
+        self.max_amount = max_amount
 
 
 def _none_or_func(f, x):
@@ -199,6 +213,68 @@ class Action:
             self.amount = amount
         else:
             raise ValueError("Didn't understand action_type {}".format(action_type))
+
+
+class AllowedAction:
+    """AllowedAction represents the range of valid actions at a specific point."""
+    def __init__(self):
+        # maps ActionType to (min, max) for BET, RAISE or None for others.
+        # only includes actions that are allowed
+        self._action_map = {}
+        self._player_idx = None
+
+    @property
+    def player_idx(self):
+        return self._player_idx
+
+    def is_action_type_allowed(self, action_type):
+        """Returns whether this type of action is allowed at all.
+
+        Args:
+          action_type: ActionType
+
+        Returns:
+          boolean
+        """
+        return action_type in self._action_map
+
+    def range_for_action(self, action_type):
+        """Returns the value range for given action_type.
+
+        Only BET and RAISE are valid arguments.
+
+        Args:
+          action_type: ActionType
+
+        Returns:
+          2 tuple: (min, max). Note that max is *inclusive*.
+
+        Raises:
+          ValueError
+          ActionNotAllowedError
+        """
+        if action_type != ActionType.BET and action_type != ActionType.RAISE:
+            raise ValueError(action_type)
+        try:
+            return self._action_map[action_type]
+        except KeyError:
+            raise ActionNotAllowedError(action_type)
+
+    def check_action(self, action):
+        """Verifies if the given action is allowed.
+
+        Raises a subclass of InvalidActionError with details.
+        """
+        if action.player_idx != self._player_idx:
+            raise ActionOutOfTurnError(action.player_idx, self._player_idx)
+        try:
+            valid_range = self._action_map[action.action_type]
+        except KeyError:
+            raise ActionNotAllowedError(action.action_type)
+        if action.action_type == ActionType.BET or action.action_type == ActionType.RAISE:
+            valid_min, valid_max = valid_range
+            if action.amount < valid_min or action.amount > valid_max:
+                raise ActionAmountError(action.amount, valid_min, valid_max)
 
 
 class HandPlayer:
