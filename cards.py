@@ -46,6 +46,9 @@ class PlayerCards:
     def __str__(self):
         return " ".join(str(c) for c in self.cards)
 
+    def __len__(self):
+        return len(self.cards)
+
     def combine(self, other):
         """Returns a new hand with a combination of the cards in both."""
         return PlayerCards(self.cards + other.cards)

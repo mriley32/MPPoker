@@ -217,11 +217,14 @@ class Action:
 
 class AllowedAction:
     """AllowedAction represents the range of valid actions at a specific point."""
-    def __init__(self):
+    def __init__(self, player_idx=None, action_map=None):
+        self._player_idx = player_idx
         # maps ActionType to (min, max) for BET, RAISE or None for others.
         # only includes actions that are allowed
-        self._action_map = {}
-        self._player_idx = None
+        if action_map is None:
+            self._action_map = {}
+        else:
+            self._action_map = action_map
 
     @property
     def player_idx(self):
@@ -375,6 +378,34 @@ class Hand:
 
     def _current_total_bet(self):
         return max(self.current_outlay)
+
+    def allowed_action(self):
+        """Gets the allowed actions for the current player.
+
+        Returns:
+          AllowedAction
+        """
+        allowed = AllowedAction(self.action_on)
+
+        current_bet = self._current_total_bet()
+        if current_bet == self.current_outlay[self.action_on]:
+            allowed._action_map[ActionType.CHECK] = None
+        else:
+            allowed._action_map[ActionType.CALL] = None
+
+        if len(self.board) <= 3:
+            bet_size = self.config.limits[0]
+        else:
+            bet_size = self.config.limits[1]
+
+        if current_bet == 0:
+            allowed._action_map[ActionType.BET] = (bet_size, bet_size)
+        else:
+            allowed._action_map[ActionType.RAISE] = (bet_size, bet_size)
+
+        allowed._action_map[ActionType.FOLD] = None
+
+        return allowed
 
     def act(self, action):
         """Performs the given action.

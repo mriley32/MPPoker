@@ -589,6 +589,18 @@ class LimitBettingRoundTestCase(unittest.TestCase):
 
 
 class AllowedActionTestCase(unittest.TestCase):
+    def initialize(self, config):
+        self.manager = game.Manager(config)
+        # We'll create players in postiions 0, 1, 2
+        for idx in range(3):
+            self.manager.add_player(game.Player("name{}".format(idx), 1000))
+
+        self.manager.button_pos = 2
+        self.manager.start_game()
+        self.assertEqual(0, self.manager.button_pos)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
+
     def test_allowed_action_api(self):
         # This test covers the external API of AllowedAction. Other test cases will verify the code
         # that generates AllowedAction for different game states.
@@ -621,6 +633,23 @@ class AllowedActionTestCase(unittest.TestCase):
         with self.assertRaises(game.ActionAmountError):
             allowed.check_action(game.Action(3, game.ActionType.RAISE, 9999))
         allowed.check_action(game.Action(3, game.ActionType.RAISE, 200))
+
+    def test_simple_limit(self):
+        self.initialize(game.Configuration(
+            max_players=3, game_type=game.GameType.LIMIT, limits=(100, 200), blinds=(50, 100)))
+
+        allowed = self.manager.current_hand.allowed_action()
+        self.assertEqual(0, allowed.player_idx)
+        self.assertFalse(allowed.is_action_type_allowed(game.ActionType.CHECK))
+        self.assertFalse(allowed.is_action_type_allowed(game.ActionType.BET))
+        self.assertTrue(allowed.is_action_type_allowed(game.ActionType.CALL))
+        self.assertTrue(allowed.is_action_type_allowed(game.ActionType.RAISE))
+        self.assertEqual((100, 100), allowed.range_for_action(game.ActionType.RAISE))
+        self.assertTrue(allowed.is_action_type_allowed(game.ActionType.FOLD))
+
+        # I'd like to write it something like this for compactness but it doesn't work right now
+        #self.assertEqual(game.AllowedAction(0, {game.ActionType.CALL: None, game.ActionType.RAISE: (100, 100)}),
+        #                 allowed)
 
 
 if __name__ == '__main__':
