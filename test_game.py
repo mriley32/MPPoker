@@ -576,16 +576,6 @@ class LimitBettingRoundTestCase(unittest.TestCase):
 
 
 
-    # Lots of testing to be added
-    # Error cases
-    # * acting out of turn
-    # * checking with active bet
-    # * betting when should only call or raise
-    # * blind betting not raising
-    # * betting when no round active
-    # Other
-    # * Betting on other rounds
-    # * Manager dealing with everyone folding correctly
 
 
 class AllowedActionTestCase(unittest.TestCase):
@@ -600,6 +590,24 @@ class AllowedActionTestCase(unittest.TestCase):
         self.assertEqual(0, self.manager.button_pos)
         self.manager.proceed()
         self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
+
+    def assert_allowed_actions(self, allowed, player_idx, action_map):
+        self.assertEqual(player_idx, allowed.player_idx)
+        for act in [game.ActionType.CHECK,
+                    game.ActionType.BET,
+                    game.ActionType.CALL,
+                    game.ActionType.RAISE,
+                    game.ActionType.FOLD,
+                    game.ActionType.BLIND_BET]:
+            self.assertEqual(act in action_map, allowed.is_action_type_allowed(act), act)
+        for act in [game.ActionType.BET,
+                    game.ActionType.CALL,
+                    game.ActionType.RAISE]:
+            if act in action_map:
+                self.assertEqual(action_map[act],
+                                 allowed.range_for_action(act),
+                                 act)
+
 
     def test_allowed_action_api(self):
         # This test covers the external API of AllowedAction. Other test cases will verify the code
@@ -641,17 +649,32 @@ class AllowedActionTestCase(unittest.TestCase):
             max_players=3, game_type=game.GameType.LIMIT, limits=(100, 200), blinds=(50, 100)))
 
         allowed = self.manager.current_hand.allowed_action()
-        self.assertEqual(0, allowed.player_idx)
-        self.assertFalse(allowed.is_action_type_allowed(game.ActionType.CHECK))
-        self.assertFalse(allowed.is_action_type_allowed(game.ActionType.BET))
-        self.assertTrue(allowed.is_action_type_allowed(game.ActionType.CALL))
-        self.assertTrue(allowed.is_action_type_allowed(game.ActionType.RAISE))
-        self.assertEqual((100, 100), allowed.range_for_action(game.ActionType.RAISE))
-        self.assertTrue(allowed.is_action_type_allowed(game.ActionType.FOLD))
+        self.assert_allowed_actions(allowed, 0, {game.ActionType.CALL: (100, 100),
+                                                 game.ActionType.RAISE: (100, 100),
+                                                 game.ActionType.FOLD: None,})
 
-        # I'd like to write it something like this for compactness but it doesn't work right now
-        #self.assertEqual(game.AllowedAction(0, {game.ActionType.CALL: None, game.ActionType.RAISE: (100, 100)}),
-        #                 allowed)
+        self.manager.current_hand.act(game.Action(0, game.ActionType.CALL))
+        allowed = self.manager.current_hand.allowed_action()
+        self.assert_allowed_actions(allowed, 1, {game.ActionType.CALL: (50, 50),
+                                                 game.ActionType.RAISE: (100, 100),
+                                                 game.ActionType.FOLD: None,})
+
+        self.manager.current_hand.act(game.Action(1, game.ActionType.CALL))
+        allowed = self.manager.current_hand.allowed_action()
+        self.assert_allowed_actions(allowed, 2, {game.ActionType.CHECK: None,
+                                                 game.ActionType.RAISE: (100, 100),
+                                                 game.ActionType.FOLD: None,})
+
+    # Lots of testing to be added
+    # Error cases
+    # * acting out of turn
+    # * checking with active bet
+    # * betting when should only call or raise
+    # * blind betting not raising
+    # * betting when no round active
+    # Other
+    # * Betting on other rounds
+    # * Manager dealing with everyone folding correctly
 
 
 if __name__ == '__main__':
