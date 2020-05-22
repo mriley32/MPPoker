@@ -608,18 +608,19 @@ class AllowedActionTestCase(unittest.TestCase):
         allowed._player_idx = 3
         allowed._action_map[game.ActionType.CHECK] = None
         allowed._action_map[game.ActionType.BET] = (10, 20)
+        allowed._action_map[game.ActionType.CALL] = (5, 5)
         self.assertTrue(allowed.is_action_type_allowed(game.ActionType.CHECK))
         self.assertTrue(allowed.is_action_type_allowed(game.ActionType.BET))
         self.assertFalse(allowed.is_action_type_allowed(game.ActionType.RAISE))
+        self.assertTrue(allowed.is_action_type_allowed(game.ActionType.CALL))
 
         with self.assertRaises(ValueError):
             allowed.range_for_action(game.ActionType.CHECK)
         with self.assertRaises(game.ActionNotAllowedError):
             allowed.range_for_action(game.ActionType.RAISE)
         self.assertEqual((10, 20), allowed.range_for_action(game.ActionType.BET))
+        self.assertEqual((5, 5), allowed.range_for_action(game.ActionType.CALL))
 
-        with self.assertRaises(game.ActionNotAllowedError):
-            allowed.check_action(game.Action(3, game.ActionType.CALL))
         with self.assertRaises(game.ActionOutOfTurnError):
             allowed.check_action(game.Action(0, game.ActionType.CHECK))
         with self.assertRaises(game.ActionAmountError):
@@ -628,6 +629,7 @@ class AllowedActionTestCase(unittest.TestCase):
             allowed.check_action(game.Action(3, game.ActionType.BET, 21))
         allowed.check_action(game.Action(3, game.ActionType.BET, 10))
         allowed.check_action(game.Action(3, game.ActionType.BET, 20))
+        allowed.check_action(game.Action(3, game.ActionType.CALL))
 
         allowed._action_map[game.ActionType.RAISE] = (100, 200)
         with self.assertRaises(game.ActionAmountError):

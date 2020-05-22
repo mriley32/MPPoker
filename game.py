@@ -244,7 +244,8 @@ class AllowedAction:
     def range_for_action(self, action_type):
         """Returns the value range for given action_type.
 
-        Only BET and RAISE are valid arguments.
+        Only BET, RAISE, and CALL are valid arguments.
+        For CALL, min will always equal max.
 
         Args:
           action_type: ActionType
@@ -256,7 +257,7 @@ class AllowedAction:
           ValueError
           ActionNotAllowedError
         """
-        if action_type != ActionType.BET and action_type != ActionType.RAISE:
+        if action_type not in [ActionType.BET, ActionType.RAISE, ActionType.CALL]:
             raise ValueError(action_type)
         try:
             return self._action_map[action_type]
@@ -391,7 +392,8 @@ class Hand:
         if current_bet == self.current_outlay[self.action_on]:
             allowed._action_map[ActionType.CHECK] = None
         else:
-            allowed._action_map[ActionType.CALL] = None
+            amount = current_bet - self.current_outlay[self.action_on]
+            allowed._action_map[ActionType.CALL] = (amount, amount)
 
         if len(self.board) <= 3:
             bet_size = self.config.limits[0]
