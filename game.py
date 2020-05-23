@@ -408,6 +408,8 @@ class Hand:
           AllowedAction
         """
         allowed = AllowedAction(self.action_on)
+        if not self.is_betting_active():
+            return allowed
 
         current_bet = self._current_total_bet()
         if current_bet == self.current_outlay[self.action_on]:
@@ -655,8 +657,6 @@ class Manager:
 
     def proceed(self):
         events = []
-
-        # TODO: emit allowed actions events
 
         if self.state == GameState.WAITING_FOR_START:
             raise WaitingForStartError()

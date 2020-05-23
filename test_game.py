@@ -346,6 +346,9 @@ class MainStatesWithBettingTestCase(unittest.TestCase):
         self.assertEqual(2, e.action.player_idx)
         self.assertEqual(game.ActionType.CHECK, e.action.action_type)
 
+        with self.assertRaisesRegex(game.ActionOutOfTurnError, "(0, None)"):
+            self.manager.act(game.Action(0, game.ActionType.CALL))
+
         # flop
         self.recorder.clear()
         self.manager.proceed()
@@ -384,6 +387,9 @@ class MainStatesWithBettingTestCase(unittest.TestCase):
         self.assertEqual(game.EventType.ACTION, e.event_type)
         self.assertEqual(0, e.action.player_idx)
         self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+
+        with self.assertRaisesRegex(game.ActionOutOfTurnError, "(0, None)"):
+            self.manager.act(game.Action(0, game.ActionType.CALL))
 
         # turn
         self.recorder.clear()
@@ -424,6 +430,9 @@ class MainStatesWithBettingTestCase(unittest.TestCase):
         self.assertEqual(0, e.action.player_idx)
         self.assertEqual(game.ActionType.CHECK, e.action.action_type)
 
+        with self.assertRaisesRegex(game.ActionOutOfTurnError, "(0, None)"):
+            self.manager.act(game.Action(0, game.ActionType.CALL))
+
         # river
         self.recorder.clear()
         self.manager.proceed()
@@ -462,6 +471,9 @@ class MainStatesWithBettingTestCase(unittest.TestCase):
         self.assertEqual(game.EventType.ACTION, e.event_type)
         self.assertEqual(0, e.action.player_idx)
         self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+
+        with self.assertRaisesRegex(game.ActionOutOfTurnError, "(0, None)"):
+            self.manager.act(game.Action(0, game.ActionType.CALL))
 
 
 
