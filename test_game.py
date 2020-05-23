@@ -810,10 +810,52 @@ class AllowedActionTestCase(unittest.TestCase):
                 self.manager.act(game.Action(player_idx, game.ActionType.CHECK))
 
 
+    def test_limit_raise_sizes(self):
+        self.initialize(game.Configuration(
+            max_players=3, game_type=game.GameType.LIMIT, limits=(100, 200), blinds=(50, 100)))
+
+        # pre-flop
+        allowed = self.manager.current_hand.allowed_action()
+        self.assert_allowed_actions(allowed, 0, {game.ActionType.CALL: (100, 100),
+                                                 game.ActionType.RAISE: (100, 100),
+                                                 game.ActionType.FOLD: None,})
+
+        # flop
+        check_call_all(self.manager)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.FLOP_DEALT, self.manager.state)
+
+        self.manager.act(game.Action(1, game.ActionType.BET, 100))
+        allowed = self.manager.current_hand.allowed_action()
+        self.assert_allowed_actions(allowed, 2, {game.ActionType.CALL: (100, 100),
+                                                 game.ActionType.RAISE: (100, 100),
+                                                 game.ActionType.FOLD: None,})
+
+        # turn
+        check_call_all(self.manager)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.TURN_DEALT, self.manager.state)
+
+        self.manager.act(game.Action(1, game.ActionType.BET, 200))
+        allowed = self.manager.current_hand.allowed_action()
+        self.assert_allowed_actions(allowed, 2, {game.ActionType.CALL: (200, 200),
+                                                 game.ActionType.RAISE: (200, 200),
+                                                 game.ActionType.FOLD: None,})
+
+        # river
+        check_call_all(self.manager)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.RIVER_DEALT, self.manager.state)
+
+        self.manager.act(game.Action(1, game.ActionType.BET, 200))
+        allowed = self.manager.current_hand.allowed_action()
+        self.assert_allowed_actions(allowed, 2, {game.ActionType.CALL: (200, 200),
+                                                 game.ActionType.RAISE: (200, 200),
+                                                 game.ActionType.FOLD: None,})
+
+
 
     # Lots of testing to be added
-    # Error cases
-    # * betting when should only call or raise
     # Other
     # * Manager dealing with everyone folding correctly
 
