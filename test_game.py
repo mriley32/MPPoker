@@ -352,132 +352,50 @@ class MainStatesWithBettingTestCase(unittest.TestCase):
         with self.assertRaisesRegex(game.ActionOutOfTurnError, "(0, None)"):
             self.manager.act(game.Action(0, game.ActionType.CALL))
 
-        # flop
-        self.recorder.clear()
-        self.manager.proceed()
-        self.assertEqual(game.GameState.FLOP_DEALT, self.manager.state)
-        self.assertEqual(2, len(self.recorder.events))
-        e = self.recorder.events[0]
-        self.assertEqual(game.EventType.FLOP_DEALT, e.event_type)
-        e = self.recorder.events[1]
-        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
-        self.assertEqual(1, e.hand_player.base_player.position)
-        self.assertIsInstance(e.allowed, game.AllowedAction)
-
-        with self.assertRaises(game.BettingActiveError):
+        for expected_state, expected_event_type in [
+                [game.GameState.FLOP_DEALT, game.EventType.FLOP_DEALT],
+                [game.GameState.TURN_DEALT, game.EventType.TURN_DEALT],
+                [game.GameState.RIVER_DEALT, game.EventType.RIVER_DEALT]]:
+            self.recorder.clear()
             self.manager.proceed()
+            self.assertEqual(expected_state, self.manager.state)
+            self.assertEqual(2, len(self.recorder.events))
+            e = self.recorder.events[0]
+            self.assertEqual(expected_event_type, e.event_type)
+            e = self.recorder.events[1]
+            self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+            self.assertEqual(1, e.hand_player.base_player.position)
+            self.assertIsInstance(e.allowed, game.AllowedAction)
 
-        self.recorder.clear()
-        check_call_all(self.manager)
-        self.assertEqual(5, len(self.recorder.events))
-        e = self.recorder.events[0]
-        self.assertEqual(game.EventType.ACTION, e.event_type)
-        self.assertEqual(1, e.action.player_idx)
-        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
-        e = self.recorder.events[1]
-        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
-        self.assertEqual(2, e.hand_player.base_player.position)
-        self.assertIsInstance(e.allowed, game.AllowedAction)
-        e = self.recorder.events[2]
-        self.assertEqual(game.EventType.ACTION, e.event_type)
-        self.assertEqual(2, e.action.player_idx)
-        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
-        e = self.recorder.events[3]
-        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
-        self.assertEqual(0, e.hand_player.base_player.position)
-        self.assertIsInstance(e.allowed, game.AllowedAction)
-        e = self.recorder.events[4]
-        self.assertEqual(game.EventType.ACTION, e.event_type)
-        self.assertEqual(0, e.action.player_idx)
-        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+            with self.assertRaises(game.BettingActiveError):
+                self.manager.proceed()
 
-        with self.assertRaisesRegex(game.ActionOutOfTurnError, "(0, None)"):
-            self.manager.act(game.Action(0, game.ActionType.CALL))
+            self.recorder.clear()
+            check_call_all(self.manager)
+            self.assertEqual(5, len(self.recorder.events))
+            e = self.recorder.events[0]
+            self.assertEqual(game.EventType.ACTION, e.event_type)
+            self.assertEqual(1, e.action.player_idx)
+            self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+            e = self.recorder.events[1]
+            self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+            self.assertEqual(2, e.hand_player.base_player.position)
+            self.assertIsInstance(e.allowed, game.AllowedAction)
+            e = self.recorder.events[2]
+            self.assertEqual(game.EventType.ACTION, e.event_type)
+            self.assertEqual(2, e.action.player_idx)
+            self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+            e = self.recorder.events[3]
+            self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+            self.assertEqual(0, e.hand_player.base_player.position)
+            self.assertIsInstance(e.allowed, game.AllowedAction)
+            e = self.recorder.events[4]
+            self.assertEqual(game.EventType.ACTION, e.event_type)
+            self.assertEqual(0, e.action.player_idx)
+            self.assertEqual(game.ActionType.CHECK, e.action.action_type)
 
-        # turn
-        self.recorder.clear()
-        self.manager.proceed()
-        self.assertEqual(game.GameState.TURN_DEALT, self.manager.state)
-        self.assertEqual(2, len(self.recorder.events))
-        e = self.recorder.events[0]
-        self.assertEqual(game.EventType.TURN_DEALT, e.event_type)
-        e = self.recorder.events[1]
-        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
-        self.assertEqual(1, e.hand_player.base_player.position)
-        self.assertIsInstance(e.allowed, game.AllowedAction)
-
-        with self.assertRaises(game.BettingActiveError):
-            self.manager.proceed()
-
-        self.recorder.clear()
-        check_call_all(self.manager)
-        self.assertEqual(5, len(self.recorder.events))
-        e = self.recorder.events[0]
-        self.assertEqual(game.EventType.ACTION, e.event_type)
-        self.assertEqual(1, e.action.player_idx)
-        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
-        e = self.recorder.events[1]
-        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
-        self.assertEqual(2, e.hand_player.base_player.position)
-        self.assertIsInstance(e.allowed, game.AllowedAction)
-        e = self.recorder.events[2]
-        self.assertEqual(game.EventType.ACTION, e.event_type)
-        self.assertEqual(2, e.action.player_idx)
-        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
-        e = self.recorder.events[3]
-        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
-        self.assertEqual(0, e.hand_player.base_player.position)
-        self.assertIsInstance(e.allowed, game.AllowedAction)
-        e = self.recorder.events[4]
-        self.assertEqual(game.EventType.ACTION, e.event_type)
-        self.assertEqual(0, e.action.player_idx)
-        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
-
-        with self.assertRaisesRegex(game.ActionOutOfTurnError, "(0, None)"):
-            self.manager.act(game.Action(0, game.ActionType.CALL))
-
-        # river
-        self.recorder.clear()
-        self.manager.proceed()
-        self.assertEqual(game.GameState.RIVER_DEALT, self.manager.state)
-        self.assertEqual(2, len(self.recorder.events))
-        e = self.recorder.events[0]
-        self.assertEqual(game.EventType.RIVER_DEALT, e.event_type)
-        e = self.recorder.events[1]
-        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
-        self.assertEqual(1, e.hand_player.base_player.position)
-        self.assertIsInstance(e.allowed, game.AllowedAction)
-
-        with self.assertRaises(game.BettingActiveError):
-            self.manager.proceed()
-
-        self.recorder.clear()
-        check_call_all(self.manager)
-        self.assertEqual(5, len(self.recorder.events))
-        e = self.recorder.events[0]
-        self.assertEqual(game.EventType.ACTION, e.event_type)
-        self.assertEqual(1, e.action.player_idx)
-        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
-        e = self.recorder.events[1]
-        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
-        self.assertEqual(2, e.hand_player.base_player.position)
-        self.assertIsInstance(e.allowed, game.AllowedAction)
-        e = self.recorder.events[2]
-        self.assertEqual(game.EventType.ACTION, e.event_type)
-        self.assertEqual(2, e.action.player_idx)
-        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
-        e = self.recorder.events[3]
-        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
-        self.assertEqual(0, e.hand_player.base_player.position)
-        self.assertIsInstance(e.allowed, game.AllowedAction)
-        e = self.recorder.events[4]
-        self.assertEqual(game.EventType.ACTION, e.event_type)
-        self.assertEqual(0, e.action.player_idx)
-        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
-
-        with self.assertRaisesRegex(game.ActionOutOfTurnError, "(0, None)"):
-            self.manager.act(game.Action(0, game.ActionType.CALL))
-
+            with self.assertRaisesRegex(game.ActionOutOfTurnError, "(0, None)"):
+                self.manager.act(game.Action(0, game.ActionType.CALL))
 
 
 class AnteTestCase(unittest.TestCase):
@@ -819,7 +737,6 @@ class AllowedActionTestCase(unittest.TestCase):
                                  allowed.range_for_action(act),
                                  act)
 
-
     def test_allowed_action_api(self):
         # This test covers the external API of AllowedAction. Other test cases will verify the code
         # that generates AllowedAction for different game states.
@@ -859,6 +776,7 @@ class AllowedActionTestCase(unittest.TestCase):
         self.initialize(game.Configuration(
             max_players=3, game_type=game.GameType.LIMIT, limits=(100, 200), blinds=(50, 100)))
 
+        # pre flop
         allowed = self.manager.current_hand.allowed_action()
         self.assert_allowed_actions(allowed, 0, {game.ActionType.CALL: (100, 100),
                                                  game.ActionType.RAISE: (100, 100),
