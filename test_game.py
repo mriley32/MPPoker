@@ -5,6 +5,24 @@ import deck
 import game
 
 
+def in_order_deck_factory():
+    return deck.Deck()
+
+def deck_factory_from_cards(player_cards, board):
+    return lambda: deck.Deck.from_initial_cards_str(
+        " ".join(player_cards) + " " + board)
+
+def check_call_all(manager):
+    while manager.current_hand.is_betting_active():
+        allowed = manager.current_hand.allowed_action()
+        for act in [game.ActionType.CHECK, game.ActionType.CALL]:
+            if allowed.is_action_type_allowed(act):
+                #print("{} acting with {}".format(allowed.player_idx, act))
+                manager.act(game.Action(player_idx=allowed.player_idx, action_type=act))
+                break
+
+
+
 class AddRemoveTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = game.Manager(game.Configuration())
@@ -105,10 +123,6 @@ class AdvanceButtonTestCase(unittest.TestCase):
         with self.assertRaises(game.NotEnoughPlayersError):
             self.manager._advance_button()
         self.assertIsNone(self.manager.button_pos)
-
-
-def in_order_deck_factory():
-    return deck.Deck()
 
 
 class MainStatesTestCase(unittest.TestCase):
@@ -271,6 +285,186 @@ class MainStatesTestCase(unittest.TestCase):
             self.manager.proceed()
 
 
+class MainStatesWithBettingTestCase(unittest.TestCase):
+    def setUp(self):
+        self.manager = game.Manager(game.Configuration(game_type=game.GameType.LIMIT,
+                                                       limits=[10,20],
+                                                       blinds=[5, 10]))
+        self.manager._deck_factory = in_order_deck_factory
+        # We'll create players in postiions 0, 1, 2
+        for idx in range(3):
+            self.manager.add_player(game.Player("name{}".format(idx), 1000))
+
+        # Button will be advanced to 0
+        self.manager.button_pos = 5
+        self.recorder = game.RecordingListener()
+        self.manager.add_listener(self.recorder)
+        # we do long string diffs
+        self.maxDiff = None
+
+    def test_check_call_all(self):
+        # We are only checking the betting related events here.
+        self.manager.start_game()
+        self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+
+        # Pre flop
+        self.recorder.clear()
+        self.manager.proceed()
+        self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
+        self.assertEqual(2, len(self.recorder.events))
+        e = self.recorder.events[0]
+        self.assertEqual(game.EventType.HOLE_CARDS_DEALT, e.event_type)
+        e = self.recorder.events[1]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(0, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+
+        with self.assertRaises(game.BettingActiveError):
+            self.manager.proceed()
+
+        self.recorder.clear()
+        check_call_all(self.manager)
+        self.assertEqual(5, len(self.recorder.events))
+        e = self.recorder.events[0]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(0, e.action.player_idx)
+        self.assertEqual(game.ActionType.CALL, e.action.action_type)
+        e = self.recorder.events[1]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(1, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+        e = self.recorder.events[2]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(1, e.action.player_idx)
+        self.assertEqual(game.ActionType.CALL, e.action.action_type)
+        e = self.recorder.events[3]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(2, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+        e = self.recorder.events[4]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(2, e.action.player_idx)
+        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+
+        # flop
+        self.recorder.clear()
+        self.manager.proceed()
+        self.assertEqual(game.GameState.FLOP_DEALT, self.manager.state)
+        self.assertEqual(2, len(self.recorder.events))
+        e = self.recorder.events[0]
+        self.assertEqual(game.EventType.FLOP_DEALT, e.event_type)
+        e = self.recorder.events[1]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(1, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+
+        with self.assertRaises(game.BettingActiveError):
+            self.manager.proceed()
+
+        self.recorder.clear()
+        check_call_all(self.manager)
+        self.assertEqual(5, len(self.recorder.events))
+        e = self.recorder.events[0]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(1, e.action.player_idx)
+        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+        e = self.recorder.events[1]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(2, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+        e = self.recorder.events[2]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(2, e.action.player_idx)
+        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+        e = self.recorder.events[3]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(0, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+        e = self.recorder.events[4]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(0, e.action.player_idx)
+        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+
+        # turn
+        self.recorder.clear()
+        self.manager.proceed()
+        self.assertEqual(game.GameState.TURN_DEALT, self.manager.state)
+        self.assertEqual(2, len(self.recorder.events))
+        e = self.recorder.events[0]
+        self.assertEqual(game.EventType.TURN_DEALT, e.event_type)
+        e = self.recorder.events[1]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(1, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+
+        with self.assertRaises(game.BettingActiveError):
+            self.manager.proceed()
+
+        self.recorder.clear()
+        check_call_all(self.manager)
+        self.assertEqual(5, len(self.recorder.events))
+        e = self.recorder.events[0]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(1, e.action.player_idx)
+        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+        e = self.recorder.events[1]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(2, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+        e = self.recorder.events[2]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(2, e.action.player_idx)
+        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+        e = self.recorder.events[3]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(0, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+        e = self.recorder.events[4]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(0, e.action.player_idx)
+        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+
+        # river
+        self.recorder.clear()
+        self.manager.proceed()
+        self.assertEqual(game.GameState.RIVER_DEALT, self.manager.state)
+        self.assertEqual(2, len(self.recorder.events))
+        e = self.recorder.events[0]
+        self.assertEqual(game.EventType.RIVER_DEALT, e.event_type)
+        e = self.recorder.events[1]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(1, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+
+        with self.assertRaises(game.BettingActiveError):
+            self.manager.proceed()
+
+        self.recorder.clear()
+        check_call_all(self.manager)
+        self.assertEqual(5, len(self.recorder.events))
+        e = self.recorder.events[0]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(1, e.action.player_idx)
+        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+        e = self.recorder.events[1]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(2, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+        e = self.recorder.events[2]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(2, e.action.player_idx)
+        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+        e = self.recorder.events[3]
+        self.assertEqual(game.EventType.ACTION_ON, e.event_type)
+        self.assertEqual(0, e.hand_player.base_player.position)
+        self.assertIsInstance(e.allowed, game.AllowedAction)
+        e = self.recorder.events[4]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(0, e.action.player_idx)
+        self.assertEqual(game.ActionType.CHECK, e.action.action_type)
+
+
+
 class AnteTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = game.Manager(game.Configuration(ante=100))
@@ -292,10 +486,6 @@ class AnteTestCase(unittest.TestCase):
         self.assertEqual(100, self.recorder.events[1].amount)
         self.assertEqual([0, 1], self.recorder.events[1].player_indices)
 
-
-def deck_factory_from_cards(player_cards, board):
-    return lambda: deck.Deck.from_initial_cards_str(
-        " ".join(player_cards) + " " + board)
 
 class ShowdownTestCase(unittest.TestCase):
     def setUp(self):
@@ -411,7 +601,7 @@ class LimitBettingRoundTestCase(unittest.TestCase):
     def perform_actions(self, actions):
         for a in actions:
             self.assertTrue(self.manager.current_hand.is_betting_active())
-            self.manager.current_hand.act(a)
+            self.manager.act(a)
 
     def test_no_blinds_check_around(self):
         self.initialize(game.Configuration(
@@ -574,7 +764,7 @@ class LimitBettingRoundTestCase(unittest.TestCase):
         self.assertEqual([800, 800, None, 800, 900], self.get_stacks())
         self.assertEqual([True, True, False, True, False], self.manager.current_hand.live_players())
 
-
+# TODO: add test that act does error checking
 
 
 
@@ -653,13 +843,13 @@ class AllowedActionTestCase(unittest.TestCase):
                                                  game.ActionType.RAISE: (100, 100),
                                                  game.ActionType.FOLD: None,})
 
-        self.manager.current_hand.act(game.Action(0, game.ActionType.CALL))
+        self.manager.act(game.Action(0, game.ActionType.CALL))
         allowed = self.manager.current_hand.allowed_action()
         self.assert_allowed_actions(allowed, 1, {game.ActionType.CALL: (50, 50),
                                                  game.ActionType.RAISE: (100, 100),
                                                  game.ActionType.FOLD: None,})
 
-        self.manager.current_hand.act(game.Action(1, game.ActionType.CALL))
+        self.manager.act(game.Action(1, game.ActionType.CALL))
         allowed = self.manager.current_hand.allowed_action()
         self.assert_allowed_actions(allowed, 2, {game.ActionType.CHECK: None,
                                                  game.ActionType.RAISE: (100, 100),

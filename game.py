@@ -28,6 +28,9 @@ class NotReadyError(Exception):
 class WaitingForStartError(NotReadyError):
     pass
 
+class BettingActiveError(NotReadyError):
+    pass
+
 
 class InvalidActionError(Exception):
     pass
@@ -46,6 +49,10 @@ class ActionAmountError(InvalidActionError):
         self.amount = amount
         self.min_amount = min_amount
         self.max_amount = max_amount
+
+class ActionInWrongStateErrror(InvalidActionError):
+    def __init__(self, state):
+        self.state = state
 
 
 def _none_or_func(f, x):
@@ -128,6 +135,12 @@ class EventType(enum.Enum):
     #     pot_winnings (array of int (config.max_players size))
     #     net_profit (array of int (config.max_players size))
     PAYING_OUT = 10
+    # Expected args: action (Action)
+    ACTION = 11
+    # Expected args:
+    #     hand_player (HandPlayer)
+    #     allowed (AllowedAction)
+    ACTION_ON = 12
 
 class Event:
     """Events are for communicating out what has happened in the game.
@@ -357,6 +370,14 @@ class Hand:
         return [p is not None and p.hole_cards is not None
                 for p in self.players]
 
+    def is_betting_active(self):
+        """Returns whether a betting round is in progress.
+
+        Returns:
+          boolean
+        """
+        return self.action_on is not None
+
     def _start_betting_round(self):
         if self.config.game_type == GameType.NO_BETTING:
             return
@@ -449,14 +470,6 @@ class Hand:
             self.past_action = None
             self.current_outlay = None
 
-    def is_betting_active(self):
-        """Returns whether a betting round is in progress.
-
-        Returns:
-          boolean
-        """
-        return self.action_on is not None
-
     def deal_hole_cards(self):
         for p in self.players:
             if p is None:
@@ -470,12 +483,15 @@ class Hand:
 
     def deal_flop(self):
         self.board.cards.extend(self.deck.deal(3))
+        self._start_betting_round()
 
     def deal_turn(self):
         self.board.cards.extend(self.deck.deal(1))
+        self._start_betting_round()
 
     def deal_river(self):
         self.board.cards.extend(self.deck.deal(1))
+        self._start_betting_round()
 
     def showdown(self):
         # Find the winners
@@ -631,6 +647,8 @@ class Manager:
     def proceed(self):
         events = []
 
+        # TODO: emit allowed actions events
+
         if self.state == GameState.WAITING_FOR_START:
             raise WaitingForStartError()
 
@@ -641,29 +659,42 @@ class Manager:
                 EventType.HOLE_CARDS_DEALT,
                 cards=[_none_or_func(lambda p: p.hole_cards, p)
                        for p in self.current_hand.players]))
+            self._maybe_action_on(events)
+            # TODO: figure out how to deal with blind bets!
 
         elif self.state == GameState.HOLE_CARDS_DEALT:
+            if self.current_hand.is_betting_active():
+                raise BettingActiveError()
             self.current_hand.deal_flop()
             self.state = GameState.FLOP_DEALT
             events.append(Event(
                 EventType.FLOP_DEALT,
                 cards=self.current_hand.board))
+            self._maybe_action_on(events)
 
         elif self.state == GameState.FLOP_DEALT:
+            if self.current_hand.is_betting_active():
+                raise BettingActiveError()
             self.current_hand.deal_turn()
             self.state = GameState.TURN_DEALT
             events.append(Event(
                 EventType.TURN_DEALT,
                 card=self.current_hand.board.cards[-1]))
+            self._maybe_action_on(events)
 
         elif self.state == GameState.TURN_DEALT:
+            if self.current_hand.is_betting_active():
+                raise BettingActiveError()
             self.current_hand.deal_river()
             self.state = GameState.RIVER_DEALT
             events.append(Event(
                 EventType.RIVER_DEALT,
                 card=self.current_hand.board.cards[-1]))
+            self._maybe_action_on(events)
 
         elif self.state == GameState.RIVER_DEALT:
+            if self.current_hand.is_betting_active():
+                raise BettingActiveError()
             self.current_hand.showdown()
             self.state = GameState.SHOWDOWN
             events.append(Event(
@@ -685,6 +716,22 @@ class Manager:
                 events.append(Event(EventType.WAITING_FOR_START))
         else:
             raise ValueError("Unknown state {}".format(self.state))
+
+        for e in events:
+            self._notify(e)
+
+
+    def act(self, action):
+        if self.state not in [GameState.HOLE_CARDS_DEALT,
+                              GameState.FLOP_DEALT,
+                              GameState.TURN_DEALT,
+                              GameState.RIVER_DEALT]:
+            raise ActionInWrongStateErrror(self.state)
+
+        self.current_hand.act(action)
+
+        events = [Event(EventType.ACTION, action=action)]
+        self._maybe_action_on(events)
 
         for e in events:
             self._notify(e)
@@ -729,6 +776,14 @@ class Manager:
                                 amount=self.config.ante,
                                 player_indices=players_who_anted))
         return events
+
+    def _maybe_action_on(self, events):
+        """If betting action, add ACTION_ON event to events."""
+        if not self.current_hand.is_betting_active():
+            return
+        events.append(Event(EventType.ACTION_ON,
+                            hand_player=self.current_hand.players[self.current_hand.action_on],
+                            allowed=self.current_hand.allowed_action()))
 
 
     def _notify(self, event):
