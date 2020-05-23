@@ -50,7 +50,7 @@ class ActionAmountError(InvalidActionError):
         self.min_amount = min_amount
         self.max_amount = max_amount
 
-class ActionInWrongStateErrror(InvalidActionError):
+class ActionInWrongStateError(InvalidActionError):
     def __init__(self, state):
         self.state = state
 
@@ -735,7 +735,7 @@ class Manager:
                               GameState.FLOP_DEALT,
                               GameState.TURN_DEALT,
                               GameState.RIVER_DEALT]:
-            raise ActionInWrongStateErrror(self.state)
+            raise ActionInWrongStateError(self.state)
 
         self.current_hand.act(action)
 

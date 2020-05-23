@@ -304,6 +304,9 @@ class MainStatesWithBettingTestCase(unittest.TestCase):
 
     def test_check_call_all(self):
         # We are only checking the betting related events here.
+        with self.assertRaisesRegex(game.ActionInWrongStateError, "GameState.WAITING_FOR_START"):
+            self.manager.act(game.Action(0, game.ActionType.CALL))
+
         self.manager.start_game()
         self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
 
