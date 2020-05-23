@@ -794,15 +794,27 @@ class AllowedActionTestCase(unittest.TestCase):
                                                  game.ActionType.RAISE: (100, 100),
                                                  game.ActionType.FOLD: None,})
 
+        self.manager.act(game.Action(2, game.ActionType.CHECK))
+
+        for expected_state, expected_bet in [[game.GameState.FLOP_DEALT, 100],
+                                             [game.GameState.TURN_DEALT, 200],
+                                             [game.GameState.RIVER_DEALT, 200]]:
+            self.manager.proceed()
+            self.assertEqual(expected_state, self.manager.state)
+            for player_idx in [1, 2, 0]:
+                allowed = self.manager.current_hand.allowed_action()
+                self.assert_allowed_actions(allowed, player_idx,
+                                            {game.ActionType.CHECK: None,
+                                             game.ActionType.BET: (expected_bet, expected_bet),
+                                             game.ActionType.FOLD: None})
+                self.manager.act(game.Action(player_idx, game.ActionType.CHECK))
+
+
+
     # Lots of testing to be added
     # Error cases
-    # * acting out of turn
-    # * checking with active bet
     # * betting when should only call or raise
-    # * blind betting not raising
-    # * betting when no round active
     # Other
-    # * Betting on other rounds
     # * Manager dealing with everyone folding correctly
 
 
