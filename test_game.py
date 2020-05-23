@@ -764,8 +764,14 @@ class LimitBettingRoundTestCase(unittest.TestCase):
         self.assertEqual([800, 800, None, 800, 900], self.get_stacks())
         self.assertEqual([True, True, False, True, False], self.manager.current_hand.live_players())
 
-# TODO: add test that act does error checking
 
+    def test_actions_verified(self):
+        # This is just testing one case of actions being checked. Detailed look at all the weird cases for
+        # allowed actions are in the AllowedActionTestCase.
+        self.initialize(game.Configuration(
+            max_players=5, game_type=game.GameType.LIMIT, limits=(100, 200), blinds=(50, 100)))
+        with self.assertRaises(game.ActionAmountError):
+            self.manager.act(game.Action(1, game.ActionType.RAISE, amount=999))
 
 
 class AllowedActionTestCase(unittest.TestCase):

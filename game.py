@@ -436,10 +436,17 @@ class Hand:
         Args:
           action: Action
         """
-        if self.action_on != action.player_idx:
-            raise ActionOutOfTurnError(action.player_idx, self.action_on)
+        self.allowed_action().check_action(action)
+        self._act_unchecked(action)
 
-        # Do stuff with the action here
+    def _act_unchecked(self, action):
+        """Performs the given action with no error checking.
+
+        Needed for handling blind bets
+
+        Args:
+          action: Action
+        """
         if action.action_type == ActionType.CHECK:
             pass
         elif action.action_type == ActionType.BET or action.action_type == ActionType.BLIND_BET:
@@ -479,7 +486,9 @@ class Hand:
         self._start_betting_round()
         if self.config.blinds:
             for blind in self.config.blinds:
-                self.act(Action(player_idx=self.action_on, action_type=ActionType.BLIND_BET, amount=blind))
+                self._act_unchecked(Action(player_idx=self.action_on,
+                                           action_type=ActionType.BLIND_BET,
+                                           amount=blind))
 
     def deal_flop(self):
         self.board.cards.extend(self.deck.deal(3))
