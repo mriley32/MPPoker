@@ -697,32 +697,35 @@ class Manager:
         elif self.state == GameState.FLOP_DEALT:
             if self.current_hand.is_betting_active():
                 raise BettingActiveError()
-            self.current_hand.deal_turn()
-            self.state = GameState.TURN_DEALT
-            events.append(Event(
-                EventType.TURN_DEALT,
-                card=self.current_hand.board.cards[-1]))
-            self._maybe_action_on(events)
+            if not self._maybe_early_win(events):
+                self.current_hand.deal_turn()
+                self.state = GameState.TURN_DEALT
+                events.append(Event(
+                    EventType.TURN_DEALT,
+                    card=self.current_hand.board.cards[-1]))
+                self._maybe_action_on(events)
 
         elif self.state == GameState.TURN_DEALT:
             if self.current_hand.is_betting_active():
                 raise BettingActiveError()
-            self.current_hand.deal_river()
-            self.state = GameState.RIVER_DEALT
-            events.append(Event(
-                EventType.RIVER_DEALT,
-                card=self.current_hand.board.cards[-1]))
-            self._maybe_action_on(events)
+            if not self._maybe_early_win(events):
+                self.current_hand.deal_river()
+                self.state = GameState.RIVER_DEALT
+                events.append(Event(
+                    EventType.RIVER_DEALT,
+                    card=self.current_hand.board.cards[-1]))
+                self._maybe_action_on(events)
 
         elif self.state == GameState.RIVER_DEALT:
             if self.current_hand.is_betting_active():
                 raise BettingActiveError()
-            self.current_hand.showdown()
-            self.state = GameState.SHOWDOWN
-            events.append(Event(
-                EventType.SHOWDOWN,
-                ranks=self.current_hand.ranks,
-                winners=self.current_hand.winners))
+            if not self._maybe_early_win(events):
+                self.current_hand.showdown()
+                self.state = GameState.SHOWDOWN
+                events.append(Event(
+                    EventType.SHOWDOWN,
+                    ranks=self.current_hand.ranks,
+                    winners=self.current_hand.winners))
 
         elif self.state == GameState.SHOWDOWN:
             self.state = GameState.PAYING_OUT

@@ -404,7 +404,6 @@ class MainStatesWithBettingTestCase(unittest.TestCase):
                 self.manager.act(game.Action(0, game.ActionType.CALL))
 
     def test_fold_preflop(self):
-        # We are only checking the betting related events here.
         self.manager.start_game()
         self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
 
@@ -427,6 +426,99 @@ class MainStatesWithBettingTestCase(unittest.TestCase):
 
         self.assertEqual(1015, self.manager.players[0].stack)
         self.assertEqual(995, self.manager.players[1].stack)
+        self.assertEqual(990, self.manager.players[2].stack)
+
+    def test_fold_flop(self):
+        self.manager.start_game()
+        self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+
+        self.manager.proceed()
+        self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
+        check_call_all(self.manager)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.FLOP_DEALT, self.manager.state)
+
+        self.manager.act(game.Action(1, game.ActionType.BET, 10))
+        fold_all(self.manager)
+
+        self.recorder.clear()
+        self.manager.proceed()
+        self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.PAYING_OUT" +
+            ", net_profit=[-10, 20, -10, None]"
+            ", pot_winnings=[0, 40, 0, None]"
+            ")",
+            str(self.recorder.events[0]))
+
+        self.assertEqual(990, self.manager.players[0].stack)
+        self.assertEqual(1020, self.manager.players[1].stack)
+        self.assertEqual(990, self.manager.players[2].stack)
+
+    def test_fold_turn(self):
+        self.manager.start_game()
+        self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+
+        self.manager.proceed()
+        self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
+        check_call_all(self.manager)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.FLOP_DEALT, self.manager.state)
+        check_call_all(self.manager)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.TURN_DEALT, self.manager.state)
+
+        self.manager.act(game.Action(1, game.ActionType.BET, 20))
+        fold_all(self.manager)
+
+        self.recorder.clear()
+        self.manager.proceed()
+        self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.PAYING_OUT" +
+            ", net_profit=[-10, 20, -10, None]"
+            ", pot_winnings=[0, 50, 0, None]"
+            ")",
+            str(self.recorder.events[0]))
+
+        self.assertEqual(990, self.manager.players[0].stack)
+        self.assertEqual(1020, self.manager.players[1].stack)
+        self.assertEqual(990, self.manager.players[2].stack)
+
+    def test_fold_river(self):
+        self.manager.start_game()
+        self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+
+        self.manager.proceed()
+        self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
+        check_call_all(self.manager)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.FLOP_DEALT, self.manager.state)
+        check_call_all(self.manager)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.TURN_DEALT, self.manager.state)
+        check_call_all(self.manager)
+        self.manager.proceed()
+        self.assertEqual(game.GameState.RIVER_DEALT, self.manager.state)
+
+        self.manager.act(game.Action(1, game.ActionType.BET, 20))
+        fold_all(self.manager)
+
+        self.recorder.clear()
+        self.manager.proceed()
+        self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.PAYING_OUT" +
+            ", net_profit=[-10, 20, -10, None]"
+            ", pot_winnings=[0, 50, 0, None]"
+            ")",
+            str(self.recorder.events[0]))
+
+        self.assertEqual(990, self.manager.players[0].stack)
+        self.assertEqual(1020, self.manager.players[1].stack)
         self.assertEqual(990, self.manager.players[2].stack)
 
 
