@@ -979,10 +979,5 @@ class AllowedActionTestCase(unittest.TestCase):
 
 
 
-    # Lots of testing to be added
-    # Other
-    # * Manager dealing with everyone folding correctly
-
-
 if __name__ == '__main__':
     unittest.main()
