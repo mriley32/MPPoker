@@ -367,6 +367,11 @@ class Hand:
         return players_who_anted
 
     def live_players(self):
+        """Gives players that are still in the hand.
+
+        Returns:
+          boolean array of length len(self.players)
+        """
         return [p is not None and p.hole_cards is not None
                 for p in self.players]
 
@@ -531,7 +536,14 @@ class Hand:
                 self.players[idx].stack += extra_chips
                 break
 
-
+    def early_win(self):
+        live = self.live_players()
+        if sum(live) != 1:
+            raise ValueError("Not an early win with these players live: {}".format(live))
+        self.winners = [live.index(True)]
+        self.pot_winnings = [_none_or_func(lambda _: 0, p) for p in self.players]
+        self.pot_winnings[self.winners[0]] += self.pot
+        self.players[self.winners[0]].stack += self.pot
 
 
 @enum.unique
@@ -674,12 +686,13 @@ class Manager:
         elif self.state == GameState.HOLE_CARDS_DEALT:
             if self.current_hand.is_betting_active():
                 raise BettingActiveError()
-            self.current_hand.deal_flop()
-            self.state = GameState.FLOP_DEALT
-            events.append(Event(
-                EventType.FLOP_DEALT,
-                cards=self.current_hand.board))
-            self._maybe_action_on(events)
+            if not self._maybe_early_win(events):
+                self.current_hand.deal_flop()
+                self.state = GameState.FLOP_DEALT
+                events.append(Event(
+                    EventType.FLOP_DEALT,
+                    cards=self.current_hand.board))
+                self._maybe_action_on(events)
 
         elif self.state == GameState.FLOP_DEALT:
             if self.current_hand.is_betting_active():
@@ -729,7 +742,6 @@ class Manager:
         for e in events:
             self._notify(e)
 
-
     def act(self, action):
         if self.state not in [GameState.HOLE_CARDS_DEALT,
                               GameState.FLOP_DEALT,
@@ -745,6 +757,13 @@ class Manager:
         for e in events:
             self._notify(e)
 
+    def _maybe_early_win(self, events):
+        if sum(self.current_hand.live_players()) != 1:
+            return False
+        self.current_hand.early_win()
+        self.state = GameState.PAYING_OUT
+        events.append(self._handle_payouts())
+        return True
 
     def _handle_payouts(self):
         net_profit = [_none_or_func(lambda p: p.stack - p.initial_stack, p)

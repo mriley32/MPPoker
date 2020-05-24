@@ -21,6 +21,10 @@ def check_call_all(manager):
                 manager.act(game.Action(player_idx=allowed.player_idx, action_type=act))
                 break
 
+def fold_all(manager):
+    while manager.current_hand.is_betting_active():
+        allowed = manager.current_hand.allowed_action()
+        manager.act(game.Action(player_idx=allowed.player_idx, action_type=game.ActionType.FOLD))
 
 
 class AddRemoveTestCase(unittest.TestCase):
@@ -287,7 +291,8 @@ class MainStatesTestCase(unittest.TestCase):
 
 class MainStatesWithBettingTestCase(unittest.TestCase):
     def setUp(self):
-        self.manager = game.Manager(game.Configuration(game_type=game.GameType.LIMIT,
+        self.manager = game.Manager(game.Configuration(max_players=4,
+                                                       game_type=game.GameType.LIMIT,
                                                        limits=[10,20],
                                                        blinds=[5, 10]))
         self.manager._deck_factory = in_order_deck_factory
@@ -296,17 +301,18 @@ class MainStatesWithBettingTestCase(unittest.TestCase):
             self.manager.add_player(game.Player("name{}".format(idx), 1000))
 
         # Button will be advanced to 0
-        self.manager.button_pos = 5
+        self.manager.button_pos = 3
         self.recorder = game.RecordingListener()
         self.manager.add_listener(self.recorder)
         # we do long string diffs
         self.maxDiff = None
 
-    def test_check_call_all(self):
-        # We are only checking the betting related events here.
+    def test_error_in_wrong_state(self):
         with self.assertRaisesRegex(game.ActionInWrongStateError, "GameState.WAITING_FOR_START"):
             self.manager.act(game.Action(0, game.ActionType.CALL))
 
+    def test_check_call_all(self):
+        # We are only checking the betting related events here.
         self.manager.start_game()
         self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
 
@@ -396,6 +402,32 @@ class MainStatesWithBettingTestCase(unittest.TestCase):
 
             with self.assertRaisesRegex(game.ActionOutOfTurnError, "(0, None)"):
                 self.manager.act(game.Action(0, game.ActionType.CALL))
+
+    def test_fold_preflop(self):
+        # We are only checking the betting related events here.
+        self.manager.start_game()
+        self.assertEqual(game.GameState.PRE_DEAL, self.manager.state)
+
+        self.manager.proceed()
+        self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
+
+        self.manager.act(game.Action(0, game.ActionType.RAISE, 10))
+        fold_all(self.manager)
+
+        self.recorder.clear()
+        self.manager.proceed()
+        self.assertEqual(game.GameState.PAYING_OUT, self.manager.state)
+        self.assertEqual(1, len(self.recorder.events))
+        self.assertEqual(
+            "Event(EventType.PAYING_OUT" +
+            ", net_profit=[15, -5, -10, None]"
+            ", pot_winnings=[35, 0, 0, None]"
+            ")",
+            str(self.recorder.events[0]))
+
+        self.assertEqual(1015, self.manager.players[0].stack)
+        self.assertEqual(995, self.manager.players[1].stack)
+        self.assertEqual(990, self.manager.players[2].stack)
 
 
 class AnteTestCase(unittest.TestCase):
