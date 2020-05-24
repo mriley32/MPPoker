@@ -680,8 +680,12 @@ class Manager:
                 EventType.HOLE_CARDS_DEALT,
                 cards=[_none_or_func(lambda p: p.hole_cards, p)
                        for p in self.current_hand.players]))
+            if self.current_hand.is_betting_active():
+                for blind_action in self.current_hand.past_action:
+                    events.append(Event(
+                        EventType.ACTION,
+                        action=blind_action))
             self._maybe_action_on(events)
-            # TODO: figure out how to deal with blind bets!
 
         elif self.state == GameState.HOLE_CARDS_DEALT:
             if self.current_hand.is_betting_active():

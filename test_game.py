@@ -320,10 +320,20 @@ class MainStatesWithBettingTestCase(unittest.TestCase):
         self.recorder.clear()
         self.manager.proceed()
         self.assertEqual(game.GameState.HOLE_CARDS_DEALT, self.manager.state)
-        self.assertEqual(2, len(self.recorder.events))
+        self.assertEqual(4, len(self.recorder.events))
         e = self.recorder.events[0]
         self.assertEqual(game.EventType.HOLE_CARDS_DEALT, e.event_type)
         e = self.recorder.events[1]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(1, e.action.player_idx)
+        self.assertEqual(game.ActionType.BLIND_BET, e.action.action_type)
+        self.assertEqual(5, e.action.amount)
+        e = self.recorder.events[2]
+        self.assertEqual(game.EventType.ACTION, e.event_type)
+        self.assertEqual(2, e.action.player_idx)
+        self.assertEqual(game.ActionType.BLIND_BET, e.action.action_type)
+        self.assertEqual(10, e.action.amount)
+        e = self.recorder.events[3]
         self.assertEqual(game.EventType.ACTION_ON, e.event_type)
         self.assertEqual(0, e.hand_player.base_player.position)
         self.assertIsInstance(e.allowed, game.AllowedAction)
